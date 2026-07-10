@@ -2,6 +2,9 @@
   "steps": {
     "install": {
       "cmds": ["npm install --ignore-scripts"]
+    },
+    "build": {
+      "cmds": ["npm run build"]
     }
   }
 }
