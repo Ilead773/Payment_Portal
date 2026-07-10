@@ -3,6 +3,9 @@
 **/jspm_packages/
 **/web_modules/
 
+# Lock files (platform-specific, causes issues on Railway Linux builds)
+backend/package-lock.json
+
 # Build outputs
 **/dist/
 **/build/
