@@ -330,14 +330,6 @@ export const AdminDashboard: React.FC = () => {
     );
   }
 
-  // 3. Schools & Courses Tab (12-column Editorial Layout)
-  if (activeTab === 'schools') {
-    return (
-      <motion.div {...pageTransition}>
-        <SchoolsCoursesTab schools={schools} courses={courses} onRefresh={fetchData} />
-      </motion.div>
-    );
-  }
 
   // 4. Staff Registry Tab
   if (activeTab === 'users') {
@@ -378,7 +370,7 @@ export const AdminDashboard: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-gray-900 font-display">Student Directory</h1>
-          <p className="text-gray-505 text-xs mt-1 font-medium">Excel-style semester ledger. Add, edit, advance, and audit student accounts.</p>
+          <p className="text-gray-500 text-xs mt-1 font-medium">Excel-style semester ledger. Add, edit, advance, and audit student accounts.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
@@ -1442,180 +1434,6 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   );
 };
 
-// ================= SUB-PAGE: SCHOOLS & COURSES TAB (12-col layout) =================
-const SchoolsCoursesTab: React.FC<{ schools: any[], courses: any[], onRefresh: () => void }> = ({ schools, courses, onRefresh }) => {
-  const [newSchool, setNewSchool] = useState('');
-  const [newCourse, setNewCourse] = useState('');
-  const [targetSchoolId, setTargetSchoolId] = useState('');
-
-  const handleAddSchool = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newSchool.trim()) return;
-    try {
-      await apiRequest('/schools', {
-        method: 'POST',
-        bodyData: { name: newSchool.trim() }
-      });
-      setNewSchool('');
-      onRefresh();
-    } catch (err: any) {
-      alert(err.message);
-    }
-  };
-
-  const handleAddCourse = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCourse.trim() || !targetSchoolId) return;
-    try {
-      await apiRequest(`/schools/${targetSchoolId}/courses`, {
-        method: 'POST',
-        bodyData: { name: newCourse.trim() }
-      });
-      setNewCourse('');
-      onRefresh();
-    } catch (err: any) {
-      alert(err.message);
-    }
-  };
-
-  return (
-    <div className="space-y-6 text-xs">
-      <div>
-        <h1 className="text-xl font-bold tracking-tight text-gray-900 font-display">Schools & Courses</h1>
-        <p className="text-gray-505 text-xs mt-1 font-medium">Manage academic departments, schools, and course templates.</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Schools management card */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-5 shadow-xs">
-          <h3 className="font-semibold text-xs text-gray-805 uppercase tracking-wider">Schools / Departments</h3>
-          
-          <form onSubmit={handleAddSchool} className="flex gap-2.5">
-            <input
-              type="text"
-              placeholder="e.g. SOC (School of Computing)"
-              value={newSchool}
-              onChange={e => setNewSchool(e.target.value)}
-              className="flex-1 premium-input"
-            />
-            <button type="submit" className="px-3.5 py-1.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-lg cursor-pointer shadow-xs transition-colors">
-              Add School
-            </button>
-          </form>
-
-          <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-150 text-gray-655">
-              <thead className="bg-gray-50 font-bold text-gray-500 uppercase tracking-wider text-[9px]">
-                <tr>
-                  <th className="px-4 py-2 text-left">School Name</th>
-                  <th className="px-4 py-2 text-center">Courses</th>
-                  <th className="px-4 py-2 text-center">Students</th>
-                  <th className="px-4 py-2 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-150">
-                {schools.map(sch => (
-                  <tr key={sch.id} className="hover:bg-gray-50/50">
-                    <td className="px-4 py-2 font-bold text-gray-800">{sch.name}</td>
-                    <td className="px-4 py-2 text-center font-mono">{sch._count?.courses || 0}</td>
-                    <td className="px-4 py-2 text-center font-mono">{sch._count?.students || 0}</td>
-                    <td className="px-4 py-2 text-center">
-                      <button
-                        onClick={async () => {
-                          if (confirm('Delete this school? All course attachments will be archived.')) {
-                            try {
-                              await apiRequest(`/schools/${sch.id}`, { method: 'DELETE' });
-                              onRefresh();
-                            } catch (err: any) {
-                              alert(err.message);
-                            }
-                          }
-                        }}
-                        className="text-rose-650 hover:text-rose-700 cursor-pointer font-bold"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Courses management card */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-5 shadow-xs">
-          <h3 className="font-semibold text-xs text-gray-805 uppercase tracking-wider">Courses & Programs</h3>
-
-          <form onSubmit={handleAddCourse} className="space-y-3">
-            <div>
-              <label className="block text-gray-500 font-bold mb-1 ml-0.5">Select School</label>
-              <select
-                value={targetSchoolId}
-                onChange={e => setTargetSchoolId(e.target.value)}
-                required
-                className="w-full bg-white border border-gray-200 rounded-md px-3 py-1.5 text-gray-750 outline-none hover:border-gray-300"
-              >
-                <option value="">Choose School...</option>
-                {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </div>
-            <div className="flex gap-2.5">
-              <input
-                type="text"
-                placeholder="e.g. BCA, Animation"
-                value={newCourse}
-                onChange={e => setNewCourse(e.target.value)}
-                className="flex-1 premium-input"
-              />
-              <button type="submit" className="px-3.5 py-1.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-lg cursor-pointer shadow-xs transition-colors">
-                Add Course
-              </button>
-            </div>
-          </form>
-
-          <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-150 text-gray-655">
-              <thead className="bg-gray-50 font-bold text-gray-500 uppercase tracking-wider text-[9px]">
-                <tr>
-                  <th className="px-4 py-2 text-left">Course Name</th>
-                  <th className="px-4 py-2 text-left">School</th>
-                  <th className="px-4 py-2 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-150">
-                {courses.map(crs => (
-                  <tr key={crs.id} className="hover:bg-gray-50/50">
-                    <td className="px-4 py-2.5 font-bold text-gray-800">{crs.name}</td>
-                    <td className="px-4 py-2.5">{crs.school?.name}</td>
-                    <td className="px-4 py-2.5 text-center">
-                      <button
-                        onClick={async () => {
-                          if (confirm('Delete this course template?')) {
-                            try {
-                              await apiRequest(`/schools/courses/${crs.id}`, { method: 'DELETE' });
-                              onRefresh();
-                            } catch (err: any) {
-                              alert(err.message);
-                            }
-                          }
-                        }}
-                        className="text-rose-650 hover:text-rose-700 cursor-pointer font-bold"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // ================= SUB-PAGE: STAFF MANAGEMENT TAB =================
 const StaffDirectoryTab: React.FC<{ users: any[], onRefresh: () => void }> = ({ users, onRefresh }) => {
   const [name, setName] = useState('');
@@ -1643,7 +1461,7 @@ const StaffDirectoryTab: React.FC<{ users: any[], onRefresh: () => void }> = ({ 
     <div className="space-y-6 text-xs">
       <div>
         <h1 className="text-xl font-bold tracking-tight text-gray-900 font-display">Staff Registry</h1>
-        <p className="text-gray-505 text-xs mt-1 font-medium">Manage logins, Counselor scoping assignments, and Admin demotion overrides.</p>
+        <p className="text-gray-500 text-xs mt-1 font-medium">Manage logins, Counselor scoping assignments, and Admin demotion overrides.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -2525,7 +2343,7 @@ const ManualBulkAddTab: React.FC<ManualBulkAddTabProps> = ({ schools, courses, u
                 <X className="w-4 h-4" />
               </button>
               <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Configure Semester Budgets</h3>
-              <p className="text-gray-505 mb-4 font-medium">
+              <p className="text-gray-500 mb-4 font-medium">
                 Set manual ledger plans for <span className="text-brand-500 font-bold">{configuringRow.name || 'Unnamed Student'}</span>.
               </p>
 

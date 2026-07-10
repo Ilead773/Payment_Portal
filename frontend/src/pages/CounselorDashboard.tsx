@@ -260,7 +260,7 @@ export const CounselorDashboard: React.FC = () => {
       <motion.div {...pageTransition} className="space-y-6 text-xs">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-gray-900 font-display">My Call Schedule</h1>
-          <p className="text-gray-505 text-xs mt-1 font-medium font-display">Upcoming callback assignments and active follow-up targets.</p>
+          <p className="text-gray-500 text-xs mt-1 font-medium font-display">Upcoming callback assignments and active follow-up targets.</p>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-xs">
@@ -340,7 +340,7 @@ export const CounselorDashboard: React.FC = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-xl font-bold tracking-tight text-gray-900 font-display">Student Lookup Directory</h1>
-            <p className="text-gray-505 text-xs mt-1 font-medium font-display">Read-only student roster lookup for contact references and dues scopes.</p>
+            <p className="text-gray-500 text-xs mt-1 font-medium font-display">Read-only student roster lookup for contact references and dues scopes.</p>
           </div>
         </div>
 
