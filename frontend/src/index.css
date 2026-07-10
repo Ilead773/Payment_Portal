@@ -1,10 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;505;600;705;800&family=Geist+Mono:wght@400;505;600;705&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Plus Jakarta Sans", "Inter", "sans-serif";
-  --font-mono: "Geist Mono", "monospace";
-  --font-display: "Plus Jakarta Sans", "sans-serif";
+  --font-sans: "Inter", "sans-serif";
+  --font-mono: "JetBrains Mono", "monospace";
+  --font-display: "Inter", "sans-serif";
   
   --color-brand-50: #eff6ff;
   --color-brand-100: #dbeafe;
@@ -20,163 +20,119 @@
 
 @layer base {
   body {
-    @apply bg-[#fafbfe] text-gray-900 antialiased font-sans min-h-screen selection:bg-brand-500/10 selection:text-brand-600;
+    @apply bg-[#f8fafc] text-[#0f172a] antialiased font-sans min-h-screen selection:bg-brand-500/10 selection:text-brand-600;
   }
 }
 
-/* Custom Scrollbars (Editorial and Thin) */
+/* Custom Scrollbars (Clean, Low Contrast) */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #e4e4e7;
-  border-radius: 9999px;
+  background: #cbd5e1;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #d4d4d8;
+  background: #94a3b8;
 }
 
-/* Floating Sidebar & Apple/Vercel Layout Elements */
+/* Floating Sidebar & Layout Elements */
 .floating-sidebar {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(228, 228, 231, 0.6);
-  border-radius: 20px;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.015), 0 1px 3px rgba(0, 0, 0, 0.01);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .premium-card {
   background: #ffffff;
-  border: 1px solid #e4e4e7;
-  border-radius: 16px;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.01), 0 1px 2px -1px rgba(0, 0, 0, 0.01);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .premium-card:hover {
-  border-color: #d4d4d8;
-  box-shadow: 0 12px 30px 0 rgba(0, 0, 0, 0.035);
-  transform: translateY(-2px);
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
-/* Glassmorphism Styles */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.02);
-}
-
-.glass-card {
-  background: rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 8px 24px 0 rgba(31, 38, 135, 0.015);
-  border-radius: 16px;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.glass-card:hover {
-  background: rgba(255, 255, 255, 0.65);
-  border-color: rgba(255, 255, 255, 0.8);
-  box-shadow: 0 16px 36px 0 rgba(31, 38, 135, 0.03);
-  transform: translateY(-1px);
-}
-
-.dark-glass-card {
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
-  border-radius: 16px;
-}
-
-/* Premium Inputs */
+/* Crisp Input Design (Stripe/Linear style, no oversized glow) */
 .premium-input {
   background: #ffffff;
-  border: 1px solid #e4e4e7;
-  border-radius: 8px;
-  @apply focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition-all outline-none px-3.5 py-2 text-gray-800 placeholder-gray-400 text-xs shadow-xs;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  transition: border-color 0.1s ease, box-shadow 0.1s ease;
+  @apply outline-none px-3 py-1.5 text-xs text-slate-900 placeholder-[#94a3b8];
+}
+.premium-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb, 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .glass-input {
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(228, 228, 231, 0.8);
-  border-radius: 8px;
-  backdrop-filter: blur(4px);
-  @apply focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/8 transition-all outline-none px-3.5 py-2 text-gray-800 placeholder-gray-400 text-xs shadow-xs;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  transition: border-color 0.1s ease, box-shadow 0.1s ease;
+  @apply outline-none px-3 py-1.5 text-xs text-slate-900 placeholder-[#94a3b8];
+}
+.glass-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb, 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-/* Shimmer skeleton */
-.shimmer {
-  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.015), transparent);
-  background-size: 200% 100%;
-  animation: loading-shimmer 1.5s infinite;
-}
-
-@keyframes loading-shimmer {
-  0% { background-position: -120% 0; }
-  100% { background-position: 120% 0; }
-}
-
-/* Status dots and indicators */
+/* Status Indicators (Solid, High Contrast) */
 .status-pill-active {
-  @apply bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-full inline-flex items-center gap-1.5 font-bold;
+  @apply bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1.5 font-semibold text-[10px];
 }
 .status-pill-active::before {
   content: '';
   display: inline-block;
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  @apply bg-emerald-500 animate-pulse;
+  @apply bg-emerald-600;
 }
 
 .status-pill-dropout {
-  @apply bg-rose-50 text-rose-700 border border-rose-100 px-2 py-0.5 rounded-full inline-flex items-center gap-1.5 font-bold;
+  @apply bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1.5 font-semibold text-[10px];
 }
 .status-pill-dropout::before {
   content: '';
   display: inline-block;
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  @apply bg-rose-500;
+  @apply bg-rose-600;
 }
 
-/* Premium Spreadsheet Tables */
+/* Professional Spreadsheet Table Styling (Retool/Airtable look) */
 .premium-table-header {
-  @apply bg-gray-50/70 backdrop-blur-xs font-semibold text-gray-500 uppercase tracking-wider text-[9px] border-b border-gray-200/80 sticky top-0 z-10;
+  background: #f8fafc;
+  color: #475569;
+  @apply font-semibold uppercase tracking-wider text-[10px] border-b border-r border-slate-200 sticky top-0 z-10;
 }
 
 .premium-table-row {
-  @apply border-b border-gray-100 hover:bg-slate-50/80 transition-colors duration-150;
+  @apply border-b border-slate-200 hover:bg-slate-50 transition-colors duration-100;
 }
 
 .premium-table-cell {
-  @apply px-4.5 py-3 align-middle text-xs;
+  @apply px-4 py-2.5 align-middle text-xs border-r border-slate-200 text-slate-800;
 }
 
-/* Floating animation for graphics */
-@keyframes float {
-  0% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-10px) rotate(1deg); }
-  100% { transform: translateY(0px) rotate(0deg); }
+/* Shimmer skeleton */
+.shimmer {
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.02), transparent);
+  background-size: 200% 100%;
+  animation: loading-shimmer 1.5s infinite;
 }
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-.animate-float-delayed {
-  animation: float 7s ease-in-out infinite;
-  animation-delay: 2s;
+@keyframes loading-shimmer {
+  0% { background-position: -120% 0; }
+  100% { background-position: 120% 0; }
 }

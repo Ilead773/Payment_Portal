@@ -140,7 +140,7 @@ export const BulkEmailPortal: React.FC<BulkEmailPortalProps> = ({
         <div>
           <h2 className="text-base font-bold text-gray-905 font-display flex items-center gap-2">
             <Mail className="w-5 h-5 text-brand-500" />
-            <span>Manual Email Blast</span>
+            <span>Send Emails</span>
           </h2>
           <p className="text-xs text-gray-500 mt-1 font-medium">Filter target student groups, review recipients, and dispatch custom email notifications.</p>
         </div>

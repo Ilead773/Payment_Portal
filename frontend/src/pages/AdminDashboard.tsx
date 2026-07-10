@@ -340,7 +340,7 @@ export const AdminDashboard: React.FC = () => {
     );
   }
 
-  // 4.5 Email Blast Tab
+  // 4.5 Send Emails Tab
   if (activeTab === 'bulk-email') {
     return (
       <motion.div {...pageTransition}>

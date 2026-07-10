@@ -36,7 +36,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         { id: 'students', label: 'Student Directory', icon: Users },
         { id: 'imports', label: 'CSV Bulk Import', icon: Upload },
         { id: 'manual-bulk-add', label: 'Manual Bulk Add', icon: UserPlus },
-        { id: 'bulk-email', label: 'Email Blast', icon: Mail },
+        { id: 'bulk-email', label: 'Send Emails', icon: Mail },
         { id: 'bulk-counselor-assign', label: 'Bulk Counselor Assign', icon: UserCheck },
       ]
     },
@@ -182,11 +182,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   );
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row text-gray-800 bg-[#fafbfe] font-sans relative">
+    <div className="min-h-screen flex flex-col md:flex-row text-gray-800 bg-[#f8fafc] font-sans relative">
       
-      {/* Background visual decorations */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-blue-500/3 blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 left-[20%] w-[600px] h-[600px] rounded-full bg-indigo-500/2 blur-[140px] pointer-events-none -z-10" />
 
       {/* Mobile Top Header (Frosted glass) */}
       <header className="md:hidden flex items-center justify-between px-5 py-4 bg-white/80 backdrop-blur-md border-b border-gray-200 z-30 sticky top-0">
