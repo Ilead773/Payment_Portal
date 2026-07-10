@@ -1,0 +1,155 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(uuid())
+  name         String
+  email        String       @unique
+  passwordHash String
+  role         String       // "ADMIN" | "COUNSELOR"
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime?
+  students     Student[]    @relation("CounselorStudents")
+  payments     Payment[]    @relation("RecordedPayments")
+  adjustments  Adjustment[] @relation("RecordedAdjustments")
+  callLogs     CallLog[]
+
+  @@map("users")
+}
+
+model School {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  courses   Course[]
+  students  Student[]
+
+  @@map("schools")
+}
+
+model Course {
+  id        String    @id @default(uuid())
+  schoolId  String
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  school    School    @relation(fields: [schoolId], references: [id])
+  students  Student[]
+
+  @@unique([schoolId, name])
+  @@map("courses")
+}
+
+model Student {
+  id              String        @id @default(uuid())
+  name            String
+  schoolId        String
+  courseId        String
+  email           String?
+  phonePrimary    String
+  phoneSecondary  String?
+  counselorId     String?
+  status          String        @default("ACTIVE") // "ACTIVE" | "DROPPED_OUT"
+  examCellRemarks String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  deletedAt       DateTime?
+  school          School        @relation(fields: [schoolId], references: [id])
+  course          Course        @relation(fields: [courseId], references: [id])
+  counselor       User?         @relation("CounselorStudents", fields: [counselorId], references: [id])
+  semesterPlans   SemesterPlan[]
+  payments        Payment[]
+  callLogs        CallLog[]
+
+  @@map("students")
+}
+
+model SemesterPlan {
+  id                 String       @id @default(uuid())
+  studentId          String
+  semesterNumber     Int
+  feeAmount          Float
+  adjustmentAmount   Float        @default(0.0)
+  status             String       @default("ACTIVE") // "NOT_STARTED" | "ACTIVE" | "CLOSED"
+  dueDate            DateTime?
+  lastReminderSentAt DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  student            Student      @relation(fields: [studentId], references: [id])
+  payments           Payment[]
+  adjustments      Adjustment[]
+
+  @@unique([studentId, semesterNumber])
+  @@map("semester_plans")
+}
+
+model Payment {
+  id             String       @id @default(uuid())
+  studentId      String
+  semesterPlanId String
+  amount         Float
+  paymentDate    DateTime     @default(now())
+  recordedById   String
+  idempotencyKey String       @unique
+  createdAt      DateTime     @default(now())
+  student        Student      @relation(fields: [studentId], references: [id])
+  semesterPlan   SemesterPlan @relation(fields: [semesterPlanId], references: [id])
+  recordedBy     User         @relation("RecordedPayments", fields: [recordedById], references: [id])
+
+  @@map("payments")
+}
+
+model Adjustment {
+  id             String       @id @default(uuid())
+  semesterPlanId String
+  amount         Float
+  reason         String
+  recordedById   String
+  createdAt      DateTime     @default(now())
+  semesterPlan   SemesterPlan @relation(fields: [semesterPlanId], references: [id])
+  recordedBy     User         @relation("RecordedAdjustments", fields: [recordedById], references: [id])
+
+  @@map("adjustments")
+}
+
+model CallLog {
+  id                 String      @id @default(uuid())
+  studentId          String
+  counselorId        String
+  notes              String
+  outcome            String      // "CONNECTED" | "DID_NOT_ANSWER" | ...
+  scheduledFollowUp  DateTime?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  student            Student     @relation(fields: [studentId], references: [id])
+  counselor          User        @relation(fields: [counselorId], references: [id])
+
+  @@map("call_logs")
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String
+  before     String?  // JSON stringified
+  after      String?  // JSON stringified
+  createdAt  DateTime @default(now())
+
+  @@map("activity_logs")
+}
