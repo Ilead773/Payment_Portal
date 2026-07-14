@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useNavigationStore } from '../context/navigationStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import BulkEmailPortal from './BulkEmailPortal';
 import BulkCounselorAssignTab from './BulkCounselorAssignTab';
 
@@ -1130,6 +1131,9 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [previewRows, setPreviewRows] = useState<any[]>([]);
   const [previewStats, setPreviewStats] = useState<any>({ total: 0, new: 0, updates: 0, warnings: 0, errors: 0 });
   const [warningList, setWarningList] = useState<string[]>([]);
+  const [sheets, setSheets] = useState<string[]>([]);
+  const [selectedSheet, setSelectedSheet] = useState<string>('');
+  const [workbook, setWorkbook] = useState<any>(null);
   
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobProgress, setJobProgress] = useState(0);
@@ -1152,65 +1156,126 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     }
   };
 
+  const loadExcelSheet = (wb: any, sheetName: string) => {
+    try {
+      const ws = wb.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(ws, { defval: '' }) as any[];
+      
+      let warnings = 0;
+      let errors = 0;
+      const warns: string[] = [];
+
+      data.forEach((row: any, i: number) => {
+        const rowNum = i + 2;
+        const name = getRowValue(row, ['Student Name', 'student_name', 'name', 'student']);
+        const school = getRowValue(row, ['School', 'school', 'sch']);
+        const course = getRowValue(row, ['Course', 'course', 'crs', 'stream']);
+        const phone = getRowValue(row, ['Phone Number', 'phone_number', 'phone', 'mobile']);
+
+        if (!name || !school || !course) {
+          const isRowEmpty = Object.values(row).every(val => val === undefined || val === null || String(val).trim() === '');
+          if (!isRowEmpty) {
+            errors++;
+          }
+        }
+        if (phone && phone.includes(';')) {
+          warnings++;
+          warns.push(`Row ${rowNum}: Phone uses semi-colon. Recommends '/' split.`);
+        }
+        if (phone && phone.split(/[\/,;\s\-]+/).filter(Boolean).length > 2) {
+          warnings++;
+          warns.push(`Row ${rowNum}: Phone contains more than two numbers.`);
+        }
+      });
+
+      setPreviewRows(data.slice(0, 10));
+      setPreviewStats({
+        total: data.length,
+        new: data.length,
+        updates: 0,
+        warnings,
+        errors
+      });
+      setWarningList(warns);
+    } catch (err: any) {
+      alert(`Failed to preview sheet: ${err.message}`);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const fileExtension = file.name.split('.').pop()?.toLowerCase();
-    if (
-      fileExtension === 'xlsx' ||
-      fileExtension === 'xls' ||
-      file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-      file.type === 'application/vnd.ms-excel'
-    ) {
-      alert("It looks like you uploaded an Excel (.xlsx/.xls) file. Please save it as a Comma Separated Values (.csv) file in Excel (File > Save As > CSV) before uploading!");
-      e.target.value = '';
-      return;
-    }
-
     setCsvFile(file);
 
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        const rows = results.data;
-        let warnings = 0;
-        let errors = 0;
-        const warns: string[] = [];
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const bstr = evt.target?.result;
+          const wb = XLSX.read(bstr, { type: 'binary' });
+          setWorkbook(wb);
+          
+          const sheetNames = wb.SheetNames;
+          setSheets(sheetNames);
+          
+          const defaultSheet = sheetNames.find(name => name.toUpperCase().includes('BATCH')) || sheetNames[0];
+          setSelectedSheet(defaultSheet);
+          
+          loadExcelSheet(wb, defaultSheet);
+          setStep(2);
+        } catch (err: any) {
+          alert(`Failed to parse Excel file: ${err.message}`);
+        }
+      };
+      reader.readAsBinaryString(file);
+    } else {
+      setWorkbook(null);
+      setSheets([]);
+      setSelectedSheet('');
 
-        rows.forEach((row: any, i: number) => {
-          const rowNum = i + 2;
-          const name = getRowValue(row, ['Student Name', 'student_name', 'name', 'student']);
-          const school = getRowValue(row, ['School', 'school', 'sch']);
-          const course = getRowValue(row, ['Course', 'course', 'crs', 'stream']);
-          const phone = getRowValue(row, ['Phone Number', 'phone_number', 'phone', 'mobile']);
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          const rows = results.data;
+          let warnings = 0;
+          let errors = 0;
+          const warns: string[] = [];
 
-          if (!name || !school || !course) {
-            errors++;
-          }
-          if (phone && phone.includes(';')) {
-            warnings++;
-            warns.push(`Row ${rowNum}: Phone uses semi-colon. Recommends '/' split.`);
-          }
-          if (phone && phone.split(/[\/,;\s\-]+/).filter(Boolean).length > 2) {
-            warnings++;
-            warns.push(`Row ${rowNum}: Phone contains more than two numbers.`);
-          }
-        });
+          rows.forEach((row: any, i: number) => {
+            const rowNum = i + 2;
+            const name = getRowValue(row, ['Student Name', 'student_name', 'name', 'student']);
+            const school = getRowValue(row, ['School', 'school', 'sch']);
+            const course = getRowValue(row, ['Course', 'course', 'crs', 'stream']);
+            const phone = getRowValue(row, ['Phone Number', 'phone_number', 'phone', 'mobile']);
 
-        setPreviewRows(rows.slice(0, 10));
-        setPreviewStats({
-          total: rows.length,
-          new: rows.length,
-          updates: 0,
-          warnings,
-          errors
-        });
-        setWarningList(warns);
-        setStep(2);
-      }
-    });
+            if (!name || !school || !course) {
+              errors++;
+            }
+            if (phone && phone.includes(';')) {
+              warnings++;
+              warns.push(`Row ${rowNum}: Phone uses semi-colon. Recommends '/' split.`);
+            }
+            if (phone && phone.split(/[\/,;\s\-]+/).filter(Boolean).length > 2) {
+              warnings++;
+              warns.push(`Row ${rowNum}: Phone contains more than two numbers.`);
+            }
+          });
+
+          setPreviewRows(rows.slice(0, 10));
+          setPreviewStats({
+            total: rows.length,
+            new: rows.length,
+            updates: 0,
+            warnings,
+            errors
+          });
+          setWarningList(warns);
+          setStep(2);
+        }
+      });
+    }
   };
 
   const handleConfirmImport = async () => {
@@ -1294,7 +1359,7 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 Choose File
                 <input
                   type="file"
-                  accept=".csv"
+                  accept=".csv,.xlsx,.xls"
                   onChange={handleFileChange}
                   className="hidden"
                 />
@@ -1328,6 +1393,28 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xxs font-medium max-h-24 overflow-y-auto space-y-1">
                 <p className="font-bold flex items-center gap-1.5 mb-1.5"><AlertTriangle className="w-3.5 h-3.5" /> Parse warnings before upload:</p>
                 {warningList.map((w, idx) => <p key={idx}>• {w}</p>)}
+              </div>
+            )}
+
+            {sheets.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 border-b border-gray-150 pb-2.5">
+                <span className="text-[10px] font-bold text-gray-400 uppercase self-center mr-1">Sheets in Workbook:</span>
+                {sheets.map((sheetName) => (
+                  <button
+                    key={sheetName}
+                    onClick={() => {
+                      setSelectedSheet(sheetName);
+                      loadExcelSheet(workbook, sheetName);
+                    }}
+                    className={`px-2.5 py-1 rounded text-xxs font-bold cursor-pointer transition-colors ${
+                      selectedSheet === sheetName
+                        ? 'bg-brand-500 text-white shadow-xs'
+                        : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {sheetName}
+                  </button>
+                ))}
               </div>
             )}
 

@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as fs from 'fs';
 import { parse } from 'csv-parse/sync';
 import { randomUUID } from 'crypto';
+import * as XLSX from 'xlsx';
 
 @Processor('csv-import')
 export class ImportsProcessor extends WorkerHost {
@@ -54,33 +55,147 @@ export class ImportsProcessor extends WorkerHost {
 
   async process(job: Job<any, any, string>): Promise<any> {
     const { filePath, filename, actorId } = job.data;
+    const isExcel = filename.endsWith('.xlsx') || filename.endsWith('.xls') || filePath.endsWith('.xlsx') || filePath.endsWith('.xls');
 
-    let csvContent = '';
+    let totalRows = 0;
+    let newCount = 0;
+    let updateCount = 0;
+    let warningCount = 0;
+    let errorCount = 0;
+    const rowReports: any[] = [];
+
     try {
-      csvContent = fs.readFileSync(filePath, 'utf-8');
-    } catch (err: any) {
-      throw new Error(`Failed to read uploaded file: ${err.message}`);
+      if (isExcel) {
+        let workbook;
+        try {
+          workbook = XLSX.readFile(filePath);
+        } catch (err: any) {
+          throw new Error(`Failed to read Excel file: ${err.message}`);
+        }
+
+        const validSheets: { name: string; records: any[][] }[] = [];
+        for (const sheetName of workbook.SheetNames) {
+          const ws = workbook.Sheets[sheetName];
+          const records = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as any[][];
+          if (records.length <= 1) continue;
+
+          // Check if sheet contains student header
+          const headers = records[0].map(h => String(h || '').trim().toLowerCase().replace(/^\uFEFF/i, ''));
+          const hasStudentHeader = headers.some(h => h.includes('student') || h === 'name');
+          if (hasStudentHeader) {
+            validSheets.push({ name: sheetName, records });
+          }
+        }
+
+        if (validSheets.length === 0) {
+          throw new Error('No sheets with student list columns were found in the Excel workbook.');
+        }
+
+        const totalRowsAcrossSheets = validSheets.reduce((sum, s) => sum + (s.records.length - 1), 0);
+        totalRows = totalRowsAcrossSheets;
+
+        let globalProcessed = 0;
+        for (const sheet of validSheets) {
+          const res = await this.processSheetRecords(
+            sheet.records,
+            job,
+            actorId,
+            sheet.name,
+            globalProcessed,
+            totalRowsAcrossSheets
+          );
+          newCount += res.newCount;
+          updateCount += res.updateCount;
+          warningCount += res.warningCount;
+          errorCount += res.errorCount;
+          rowReports.push(...res.rowReports.map(r => ({ ...r, studentName: `[${sheet.name}] ${r.studentName}` })));
+          globalProcessed += sheet.records.length - 1;
+        }
+      } else {
+        // Standard CSV processing
+        let csvContent = '';
+        try {
+          csvContent = fs.readFileSync(filePath, 'utf-8');
+        } catch (err: any) {
+          throw new Error(`Failed to read uploaded file: ${err.message}`);
+        }
+
+        let records: any[][] = [];
+        try {
+          records = parse(csvContent, {
+            columns: false,
+            skip_empty_lines: true,
+            trim: true,
+            bom: true,
+            relax_column_count: true,
+          });
+        } catch (err: any) {
+          throw new Error(`CSV parsing failed: ${err.message}`);
+        }
+
+        if (records.length === 0) {
+          throw new Error('CSV file is empty');
+        }
+
+        const res = await this.processSheetRecords(
+          records,
+          job,
+          actorId,
+          'CSV',
+          0,
+          records.length - 1
+        );
+        totalRows = records.length - 1;
+        newCount = res.newCount;
+        updateCount = res.updateCount;
+        warningCount = res.warningCount;
+        errorCount = res.errorCount;
+        rowReports.push(...res.rowReports);
+      }
+    } finally {
+      // Cleanup local file
+      try {
+        fs.unlinkSync(filePath);
+      } catch (_) {}
     }
 
-    let records: any[][] = [];
-    try {
-      // Handle UTF-8 with BOM automatically
-      records = parse(csvContent, {
-        columns: false,
-        skip_empty_lines: true,
-        trim: true,
-        bom: true,
-        relax_column_count: true,
-      });
-    } catch (err: any) {
-      throw new Error(`CSV parsing failed: ${err.message}`);
-    }
+    // Save import action in Activity Log
+    await this.prisma.client.activityLog.create({
+      data: {
+        actorId,
+        action: 'BULK_IMPORT_CSV',
+        entityType: 'ImportJob',
+        entityId: job.id as string,
+        after: JSON.stringify({
+          filename,
+          totalRows,
+          newCount,
+          updateCount,
+          warningCount,
+          errorCount,
+        }),
+      },
+    });
 
-    if (records.length === 0) {
-      throw new Error('CSV file is empty');
-    }
+    return {
+      filename,
+      totalRows,
+      newCount,
+      updateCount,
+      warningCount,
+      errorCount,
+      rowReports,
+    };
+  }
 
-    // Parse the header row (row index 0)
+  private async processSheetRecords(
+    records: any[][],
+    job: Job<any, any, string>,
+    actorId: string,
+    sheetName: string,
+    globalProcessedOffset: number,
+    totalRowsAcrossAllSheets: number
+  ) {
     const headers = records[0].map(h => String(h || '').trim().toLowerCase().replace(/^\uFEFF/i, ''));
 
     let studentIndex = -1;
@@ -160,13 +275,10 @@ export class ImportsProcessor extends WorkerHost {
     if (emailIndex === -1) emailIndex = 30;
     if (phoneIndex === -1) phoneIndex = 31;
 
-    const totalRows = records.length - 1; // Exclude the header row
-    let processed = 0;
     let newCount = 0;
     let updateCount = 0;
     let warningCount = 0;
     let errorCount = 0;
-
     const rowReports: Array<{
       rowNumber: number;
       studentName: string;
@@ -176,9 +288,9 @@ export class ImportsProcessor extends WorkerHost {
     }> = [];
 
     // Duplicate detection within the file itself
-    const fileDuplicates = new Set<string>();
     const seenKeys = new Map<string, number>(); // key -> rowNumber
 
+    let processed = 0;
     for (let index = 1; index < records.length; index++) {
       const rowNum = index + 1; // row 1 in array is row 2 in Excel
       const record = records[index];
@@ -193,6 +305,11 @@ export class ImportsProcessor extends WorkerHost {
 
       // 1. Mandatory validations
       if (!name) {
+        // If the entire row is empty, skip silently!
+        const isRowEmpty = record.every(val => val === undefined || val === null || String(val).trim() === '');
+        if (isRowEmpty) {
+          continue;
+        }
         errorCount++;
         rowReports.push({
           rowNumber: rowNum,
@@ -226,10 +343,10 @@ export class ImportsProcessor extends WorkerHost {
         continue;
       }
 
-      // Check duplicate within the same CSV file
+      // Check duplicate within the same sheet
       const fileKey = `${name.toLowerCase().trim()}_${String(phoneRaw || '').toLowerCase().trim()}`;
       if (seenKeys.has(fileKey)) {
-        details.push(`Duplicate row detected within the same file (previously seen in row ${seenKeys.get(fileKey)})`);
+        details.push(`Duplicate row detected within the same sheet (previously seen in row ${seenKeys.get(fileKey)})`);
         rowStatus = 'warning';
         warningCount++;
       } else {
@@ -493,38 +610,14 @@ export class ImportsProcessor extends WorkerHost {
         });
       }
 
-      // Update progress
+      // Update progress across all sheets
       processed++;
-      const progressPercent = Math.round((processed / totalRows) * 100);
-      await job.updateProgress(progressPercent);
+      const currentProcessedGlobal = globalProcessedOffset + processed;
+      const progressPercent = Math.round((currentProcessedGlobal / totalRowsAcrossAllSheets) * 100);
+      await job.updateProgress(Math.min(progressPercent, 99));
     }
 
-    // Cleanup local file
-    try {
-      fs.unlinkSync(filePath);
-    } catch (_) {}
-
-    // Save import action in Activity Log
-    await this.prisma.client.activityLog.create({
-      data: {
-        actorId,
-        action: 'BULK_IMPORT_CSV',
-        entityType: 'ImportJob',
-        entityId: job.id as string,
-        after: JSON.stringify({
-          filename,
-          totalRows,
-          newCount,
-          updateCount,
-          warningCount,
-          errorCount,
-        }),
-      },
-    });
-
     return {
-      filename,
-      totalRows,
       newCount,
       updateCount,
       warningCount,

@@ -24,11 +24,11 @@ export class ImportsController {
       throw new BadRequestException('No file uploaded');
     }
     const ext = path.extname(file.originalname).toLowerCase();
-    if (ext !== '.csv') {
+    if (ext !== '.csv' && ext !== '.xlsx' && ext !== '.xls') {
       try {
         fs.unlinkSync(file.path);
       } catch (_) {}
-      throw new BadRequestException('Only CSV files are allowed');
+      throw new BadRequestException('Only CSV or Excel files (.xlsx, .xls) are allowed');
     }
 
     return this.importsService.queueImport(file.path, file.originalname, req.user.id);
