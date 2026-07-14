@@ -81,7 +81,7 @@ export class ImportsProcessor extends WorkerHost {
     }
 
     // Parse the header row (row index 0)
-    const headers = records[0].map(h => String(h || '').trim().toLowerCase());
+    const headers = records[0].map(h => String(h || '').trim().toLowerCase().replace(/^\uFEFF/i, ''));
 
     let studentIndex = -1;
     let schoolIndex = -1;

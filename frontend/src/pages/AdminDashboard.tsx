@@ -1110,6 +1110,19 @@ export const AdminDashboard: React.FC = () => {
   );
 };
 
+// Helper to get row value case-insensitively and ignoring non-alphanumeric chars (like BOM)
+const getRowValue = (row: any, possibleKeys: string[]): string => {
+  if (!row) return '';
+  const normalizedPossibles = possibleKeys.map(k => k.toLowerCase().replace(/[^a-z0-9]/g, ''));
+  for (const rawKey of Object.keys(row)) {
+    const normKey = rawKey.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (normalizedPossibles.includes(normKey)) {
+      return String(row[rawKey] ?? '').trim();
+    }
+  }
+  return '';
+};
+
 // ================= SUB-PAGE: CSV IMPORT WIZARD =================
 const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -1142,6 +1155,19 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    if (
+      fileExtension === 'xlsx' ||
+      fileExtension === 'xls' ||
+      file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+      file.type === 'application/vnd.ms-excel'
+    ) {
+      alert("It looks like you uploaded an Excel (.xlsx/.xls) file. Please save it as a Comma Separated Values (.csv) file in Excel (File > Save As > CSV) before uploading!");
+      e.target.value = '';
+      return;
+    }
+
     setCsvFile(file);
 
     Papa.parse(file, {
@@ -1155,10 +1181,10 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
         rows.forEach((row: any, i: number) => {
           const rowNum = i + 2;
-          const name = row['Student Name'] || row['student_name'];
-          const school = row['School'] || row['school'];
-          const course = row['Course'] || row['course'];
-          const phone = row['Phone Number'] || row['phone'];
+          const name = getRowValue(row, ['Student Name', 'student_name', 'name', 'student']);
+          const school = getRowValue(row, ['School', 'school', 'sch']);
+          const course = getRowValue(row, ['Course', 'course', 'crs', 'stream']);
+          const phone = getRowValue(row, ['Phone Number', 'phone_number', 'phone', 'mobile']);
 
           if (!name || !school || !course) {
             errors++;
@@ -1319,18 +1345,21 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 </thead>
                 <tbody className="divide-y divide-gray-150 font-medium">
                   {previewRows.map((r, idx) => {
-                    const name = r['Student Name'] || r['student_name'];
-                    const sch = r['School'] || r['school'];
-                    const crs = r['Course'] || r['course'];
+                    const name = getRowValue(r, ['Student Name', 'student_name', 'name', 'student']);
+                    const sch = getRowValue(r, ['School', 'school', 'sch']);
+                    const crs = getRowValue(r, ['Course', 'course', 'crs', 'stream']);
+                    const phone = getRowValue(r, ['Phone Number', 'phone_number', 'phone', 'mobile']);
+                    const remark = getRowValue(r, ['Re_Mark', 're_mark', 'remark', 'remarks']);
+                    const counselor = getRowValue(r, ['Counselor', 'counselor']);
                     const isErr = !name || !sch || !crs;
                     return (
                       <tr key={idx} className={isErr ? 'bg-red-50/50' : ''}>
                         <td className="px-3 py-2 text-gray-800 font-bold border-r border-gray-150">{name || '[MISSING]'}</td>
                         <td className="px-3 py-2 border-r border-gray-150">{sch || '[MISSING]'}</td>
                         <td className="px-3 py-2 border-r border-gray-150">{crs || '[MISSING]'}</td>
-                        <td className="px-3 py-2 border-r border-gray-150">{r['Phone Number'] || r['phone']}</td>
-                        <td className="px-3 py-2 border-r border-gray-150">{r['Re_Mark'] || r['re_mark']}</td>
-                        <td className="px-3 py-2">{r['Counselor'] || r['counselor']}</td>
+                        <td className="px-3 py-2 border-r border-gray-150">{phone}</td>
+                        <td className="px-3 py-2 border-r border-gray-150">{remark}</td>
+                        <td className="px-3 py-2">{counselor}</td>
                       </tr>
                     );
                   })}
