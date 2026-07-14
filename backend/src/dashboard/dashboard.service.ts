@@ -21,6 +21,22 @@ export class DashboardService {
     return { due, collected, expected };
   }
 
+  private getStudentBatchYear(student: any): number {
+    const activeSemPlans = student.semesterPlans.filter((p: any) => p.feeAmount > 0);
+    let highestSem = 0;
+    if (activeSemPlans.length > 0) {
+      highestSem = Math.max(...activeSemPlans.map((p: any) => p.semesterNumber));
+    }
+    
+    if (highestSem === 0) return 2025; // default fallback
+    
+    if (highestSem % 2 === 0) {
+      return 2025 - Math.floor(highestSem / 2) + 1;
+    } else {
+      return 2026 - Math.floor((highestSem - 1) / 2);
+    }
+  }
+
   async getAdminStats() {
     const students = await this.prisma.client.student.findMany({
       where: { deletedAt: null },
@@ -89,14 +105,13 @@ export class DashboardService {
       const plansMap = new Map<number, any>();
       student.semesterPlans.forEach(p => plansMap.set(p.semesterNumber, p));
 
-      // Even Report active semesters: 6, 4, 2
-      let evenSem = 0;
-      if (plansMap.has(6)) evenSem = 6;
-      else if (plansMap.has(4)) evenSem = 4;
-      else if (plansMap.has(2)) evenSem = 2;
+      const batchYear = this.getStudentBatchYear(student);
 
-      if (evenSem > 0) {
-        const plan = plansMap.get(evenSem);
+      // Even Report active semester: e.g., 6 for 2023, 4 for 2024, 2 for 2025
+      const expectedEvenSem = 2 * (2025 - batchYear) + 2;
+
+      if (expectedEvenSem > 0 && plansMap.has(expectedEvenSem)) {
+        const plan = plansMap.get(expectedEvenSem);
         const fee = plan.feeAmount;
         const rec = plan.payments.reduce((sum: number, p: any) => sum + p.amount, 0);
         const suspense = rec > fee ? rec - fee : 0;
@@ -113,13 +128,11 @@ export class DashboardService {
         else evenPendingCount++;
       }
 
-      // Odd Report active semesters: 5, 3
-      let oddSem = 0;
-      if (plansMap.has(5)) oddSem = 5;
-      else if (plansMap.has(3)) oddSem = 3;
+      // Odd Report active semester: e.g., 5 for 2024, 3 for 2025
+      const expectedOddSem = 2 * (2026 - batchYear) + 1;
 
-      if (oddSem > 0) {
-        const plan = plansMap.get(oddSem);
+      if (expectedOddSem > 0 && plansMap.has(expectedOddSem)) {
+        const plan = plansMap.get(expectedOddSem);
         const fee = plan.feeAmount;
         const rec = plan.payments.reduce((sum: number, p: any) => sum + p.amount, 0);
         const suspense = rec > fee ? rec - fee : 0;
@@ -226,17 +239,11 @@ export class DashboardService {
     }));
 
     students.forEach((student) => {
-      // Find highest semester plan with feeAmount > 0
-      const activeSemPlans = student.semesterPlans.filter((p: any) => p.feeAmount > 0);
-      let highestSem = 0;
-      if (activeSemPlans.length > 0) {
-        highestSem = Math.max(...activeSemPlans.map((p: any) => p.semesterNumber));
-      }
-
+      const batchYear = this.getStudentBatchYear(student);
       let batchIndex = 0; // Default to 2025
-      if (highestSem >= 6) {
+      if (batchYear === 2023) {
         batchIndex = 2; // 2023 Batch
-      } else if (highestSem >= 4) {
+      } else if (batchYear === 2024) {
         batchIndex = 1; // 2024 Batch
       } else {
         batchIndex = 0; // 2025 Batch

@@ -62,20 +62,105 @@ export class ImportsProcessor extends WorkerHost {
       throw new Error(`Failed to read uploaded file: ${err.message}`);
     }
 
-    let records: any[] = [];
+    let records: any[][] = [];
     try {
       // Handle UTF-8 with BOM automatically
       records = parse(csvContent, {
-        columns: true,
+        columns: false,
         skip_empty_lines: true,
         trim: true,
         bom: true,
+        relax_column_count: true,
       });
     } catch (err: any) {
       throw new Error(`CSV parsing failed: ${err.message}`);
     }
 
-    const totalRows = records.length;
+    if (records.length === 0) {
+      throw new Error('CSV file is empty');
+    }
+
+    // Parse the header row (row index 0)
+    const headers = records[0].map(h => String(h || '').trim().toLowerCase());
+
+    let studentIndex = -1;
+    let schoolIndex = -1;
+    let courseIndex = -1;
+    let emailIndex = -1;
+    let phoneIndex = -1;
+    let adjustmentIndex = -1;
+    let remarkIndex = -1;
+    let examRemarksIndex = -1;
+    let counselorIndex = -1;
+
+    const semFeeIndices = new Array(8).fill(-1);
+    const semReceivedIndices = new Array(8).fill(-1);
+    const semDueIndices = new Array(8).fill(-1);
+
+    const semWords = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
+
+    for (let i = 0; i < headers.length; i++) {
+      const h = headers[i];
+      if (h.includes('student') || h === 'name') {
+        studentIndex = i;
+      } else if (h === 'school') {
+        schoolIndex = i;
+      } else if (h === 'course' || h === 'stream') {
+        courseIndex = i;
+      } else if (h.includes('email')) {
+        emailIndex = i;
+      } else if (h.includes('phone') || h.includes('mobile')) {
+        phoneIndex = i;
+      } else if (h.includes('adjustment')) {
+        adjustmentIndex = i;
+      } else if (h === 're_mark' || h === 'remark') {
+        remarkIndex = i;
+      } else if (h.includes('exam cell remarks') || h.includes('exam_cell_remarks')) {
+        examRemarksIndex = i;
+      } else if (h === 'counselor') {
+        counselorIndex = i;
+      } else {
+        // Check if it matches any semester
+        for (let semIdx = 0; semIdx < 8; semIdx++) {
+          const word = semWords[semIdx];
+          if (h.includes(word) && h.includes('sem')) {
+            semFeeIndices[semIdx] = i;
+            // The next column should be received for this semester
+            if (i + 1 < headers.length && headers[i + 1].includes('receive')) {
+              semReceivedIndices[semIdx] = i + 1;
+            }
+            // The one after should be due for this semester
+            if (i + 2 < headers.length && headers[i + 2].includes('due')) {
+              semDueIndices[semIdx] = i + 2;
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    // Robust positional fallbacks if not found dynamically
+    if (studentIndex === -1) studentIndex = 1;
+    if (schoolIndex === -1) schoolIndex = 2;
+    if (courseIndex === -1) courseIndex = 3;
+
+    for (let semIdx = 0; semIdx < 8; semIdx++) {
+      if (semFeeIndices[semIdx] === -1) {
+        semFeeIndices[semIdx] = 4 + semIdx * 3;
+      }
+      if (semReceivedIndices[semIdx] === -1) {
+        semReceivedIndices[semIdx] = 5 + semIdx * 3;
+      }
+      if (semDueIndices[semIdx] === -1) {
+        semDueIndices[semIdx] = 6 + semIdx * 3;
+      }
+    }
+
+    if (adjustmentIndex === -1) adjustmentIndex = 28;
+    if (emailIndex === -1) emailIndex = 30;
+    if (phoneIndex === -1) phoneIndex = 31;
+
+    const totalRows = records.length - 1; // Exclude the header row
     let processed = 0;
     let newCount = 0;
     let updateCount = 0;
@@ -94,14 +179,14 @@ export class ImportsProcessor extends WorkerHost {
     const fileDuplicates = new Set<string>();
     const seenKeys = new Map<string, number>(); // key -> rowNumber
 
-    for (let index = 0; index < records.length; index++) {
-      const rowNum = index + 2; // header is row 1
+    for (let index = 1; index < records.length; index++) {
+      const rowNum = index + 1; // row 1 in array is row 2 in Excel
       const record = records[index];
-      const name = this.getRecordValue(record, ['Student Name', 'student_name', 'name']);
-      const schoolName = this.getRecordValue(record, ['School', 'school']) || 'iLEAD Foundation';
-      const courseName = this.getRecordValue(record, ['Course', 'course', 'stream']);
-      const email = this.getRecordValue(record, ['Email ID', 'email', 'email_id']);
-      const phoneRaw = this.getRecordValue(record, ['Phone Number', 'phone', 'phone_number']);
+      const name = studentIndex < record.length ? String(record[studentIndex] || '').trim() : '';
+      const schoolName = (schoolIndex < record.length ? String(record[schoolIndex] || '').trim() : '') || 'iLEAD Foundation';
+      const courseName = courseIndex < record.length ? String(record[courseIndex] || '').trim() : '';
+      const email = emailIndex < record.length ? String(record[emailIndex] || '').trim() : '';
+      const phoneRaw = phoneIndex < record.length ? String(record[phoneIndex] || '').trim() : '';
 
       const details: string[] = [];
       let rowStatus: 'success' | 'warning' | 'error' = 'success';
@@ -169,7 +254,7 @@ export class ImportsProcessor extends WorkerHost {
 
           // 3. Resolve Counselor if specified
           let counselorId: string | null = null;
-          const counselorName = this.getRecordValue(record, ['Counselor', 'counselor']);
+          const counselorName = counselorIndex !== -1 && counselorIndex < record.length ? String(record[counselorIndex] || '').trim() : '';
           if (counselorName) {
             const counselor = await tx.user.findFirst({
               where: {
@@ -209,9 +294,9 @@ export class ImportsProcessor extends WorkerHost {
             },
           });
 
-          const reMark = this.getRecordValue(record, ['Re_Mark', 're_mark', 'remark']) || '';
+          const reMark = remarkIndex !== -1 && remarkIndex < record.length ? String(record[remarkIndex] || '').trim() : '';
           const status = reMark.toLowerCase().includes('drop out') ? 'DROPPED_OUT' : 'ACTIVE';
-          const remarks = this.getRecordValue(record, ['Exam Cell Remarks', 'exam_cell_remarks']) || null;
+          const remarks = examRemarksIndex !== -1 && examRemarksIndex < record.length ? String(record[examRemarksIndex] || '').trim() : null;
 
           if (student) {
             // Update student
@@ -246,23 +331,13 @@ export class ImportsProcessor extends WorkerHost {
           }
 
           // 6. Process Semesters 1-8 Dues and Payments
-          const semWords = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
           for (let semIndex = 0; semIndex < 8; semIndex++) {
             const semNum = semIndex + 1;
-            const word = semWords[semIndex];
+            const feeColIdx = semFeeIndices[semIndex];
+            const recColIdx = semReceivedIndices[semIndex];
 
-            const feeAmount = this.parseAmount(this.getRecordValue(record, [
-              `${word} Semester Fee`,
-              `${word} Sem`,
-              `${word} Semester`,
-              `${word} Sem Fee`
-            ]));
-            const receivedAmount = this.parseAmount(this.getRecordValue(record, [
-              `${word} Semester Received`,
-              `${word} Sem received`,
-              `${word} Received`,
-              `${word} Sem Rec`
-            ])) || 0;
+            const feeAmount = feeColIdx !== -1 && feeColIdx < record.length ? this.parseAmount(record[feeColIdx]) : null;
+            const receivedAmount = (recColIdx !== -1 && recColIdx < record.length ? this.parseAmount(record[recColIdx]) : null) || 0;
 
             if (feeAmount !== null) {
               // Get or create SemesterPlan
@@ -355,9 +430,9 @@ export class ImportsProcessor extends WorkerHost {
           }
 
           // 7. Process adjustments
-          const adjustmentsVal = this.parseAmount(this.getRecordValue(record, ['Adjustments', 'adjustment']));
+          const adjustmentsVal = adjustmentIndex !== -1 && adjustmentIndex < record.length ? this.parseAmount(record[adjustmentIndex]) : null;
           if (adjustmentsVal !== null && adjustmentsVal > 0) {
-            const adjReason = this.getRecordValue(record, ['Adjustments Reason', 'adjustments_reason']) || 'CSV Import Adjustment';
+            const adjReason = 'CSV Import Adjustment';
             // Apply to the first active semester plan
             const activePlans = await tx.semesterPlan.findMany({
               where: { studentId: student.id },

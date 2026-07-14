@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
 import { 
   Calendar, AlertCircle, Phone, Search, RefreshCw, 
-  MessageSquare, ArrowRight, Clock, TrendingUp
+  MessageSquare, ArrowRight, Clock, X, BookOpen, Mail,
+  GraduationCap, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { useNavigationStore } from '../context/navigationStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,13 +31,13 @@ export const CounselorDashboard: React.FC = () => {
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [studentDetails, setStudentDetails] = useState<any>(null);
 
-  // Daily checklist state for counselor targets
-  const [tasks, setTasks] = useState([
-    { id: 1, text: 'Complete morning callback schedule', completed: true },
-    { id: 2, text: 'Verify 5 pending dues collections', completed: false },
-    { id: 3, text: 'Audit outstanding ledger accounts over ₹50,000', completed: false },
-    { id: 4, text: 'Follow up with unassigned calling queue', completed: false }
-  ]);
+  // My Students tab modal state
+  const [modalStudent, setModalStudent] = useState<any>(null);
+  const [modalDetails, setModalDetails] = useState<any>(null);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [sortCol, setSortCol] = useState<string>('name');
+  const [sortAsc, setSortAsc] = useState(true);
+  const [myStudentsSearch, setMyStudentsSearch] = useState('');
 
   // Call Outcomes
   const callOutcomes = [
@@ -94,6 +95,25 @@ export const CounselorDashboard: React.FC = () => {
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
+  };
+
+  const openStudentModal = async (student: any) => {
+    setModalStudent(student);
+    setModalDetails(null);
+    setModalLoading(true);
+    try {
+      const data = await apiRequest(`/students/${student.id}`);
+      setModalDetails(data);
+    } catch (err: any) {
+      alert(`Failed to load student details: ${err.message}`);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const closeModal = () => {
+    setModalStudent(null);
+    setModalDetails(null);
   };
 
   const pageTransition = {
@@ -185,65 +205,444 @@ export const CounselorDashboard: React.FC = () => {
     );
   }
 
-  // 2. My Performance Tab
-  if (activeTab === 'performance') {
+  // 2. My Students Tab
+  if (activeTab === 'my-students') {
+    const myStudents = students.filter(s => s.counselorId);
+
+    const filtered = myStudents.filter(s => {
+      const q = myStudentsSearch.toLowerCase();
+      return (
+        s.name.toLowerCase().includes(q) ||
+        String(s.phonePrimary).includes(q) ||
+        (s.school?.name || '').toLowerCase().includes(q) ||
+        (s.course?.name || '').toLowerCase().includes(q)
+      );
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
+      let av: any = a[sortCol] ?? '';
+      let bv: any = b[sortCol] ?? '';
+      if (sortCol === 'totalDue') { av = a.totalDue || 0; bv = b.totalDue || 0; }
+      if (typeof av === 'string') av = av.toLowerCase();
+      if (typeof bv === 'string') bv = bv.toLowerCase();
+      if (av < bv) return sortAsc ? -1 : 1;
+      if (av > bv) return sortAsc ? 1 : -1;
+      return 0;
+    });
+
+    const toggleSort = (col: string) => {
+      if (sortCol === col) setSortAsc(!sortAsc);
+      else { setSortCol(col); setSortAsc(true); }
+    };
+
+    const SortIcon = ({ col }: { col: string }) =>
+      sortCol === col ? (
+        sortAsc ? <ChevronUp className="w-3 h-3 inline ml-0.5" /> : <ChevronDown className="w-3 h-3 inline ml-0.5" />
+      ) : <ChevronDown className="w-3 h-3 inline ml-0.5 opacity-30" />;
+
+    // Collect which semester numbers actually have data across all students
+    const activeSemNums: number[] = [];
+    for (let i = 1; i <= 8; i++) {
+      if (myStudents.some(s => s.semesters?.find((sem: any) => sem.semesterNumber === i && sem.feeAmount !== null))) {
+        activeSemNums.push(i);
+      }
+    }
+
     return (
-      <motion.div {...pageTransition} className="space-y-6 text-xs">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-gray-900 font-display">My Performance</h1>
-          <p className="text-gray-500 text-xs mt-1 font-medium">Daily call metrics, collection waived waivers, and targets tracking.</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Hero metric: conversion rate */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col justify-between shadow-xs md:col-span-1 min-h-[140px]">
+      <>
+        <motion.div {...pageTransition} className="space-y-6 text-xs">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Average Connect Rate</span>
-              <span className="text-3xl font-mono font-bold text-brand-600 mt-2 block">78.5%</span>
+              <h1 className="text-xl font-bold tracking-tight text-gray-900 font-display flex items-center gap-2">
+                <GraduationCap className="w-5 h-5 text-brand-500" />
+                My Assigned Students
+              </h1>
+              <p className="text-gray-500 text-xs mt-1 font-medium">
+                All students assigned to you — semester dues, outstanding balances, and full profiles.
+              </p>
             </div>
-            <div className="flex items-center gap-1 text-[10px] text-gray-450 font-bold uppercase mt-4">
-              <TrendingUp className="w-3.5 h-3.5 text-brand-500" />
-              <span>Above target average (70%)</span>
+            {/* Summary chips */}
+            <div className="flex gap-2 flex-wrap">
+              <span className="px-3 py-1.5 rounded-lg bg-brand-50 border border-brand-100 text-brand-700 font-bold text-[10px] uppercase tracking-wider">
+                {myStudents.length} Students
+              </span>
+              <span className="px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-100 text-amber-700 font-bold text-[10px] uppercase tracking-wider">
+                {formatCurrency(myStudents.reduce((sum, s) => sum + (s.totalDue || 0), 0))} Outstanding
+              </span>
             </div>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col justify-between shadow-xs md:col-span-1">
-            <div>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Calls Logged (MTD)</span>
-              <span className="text-3xl font-mono font-bold text-gray-900 mt-2 block">142</span>
-            </div>
-            <p className="text-[9px] text-gray-400 font-bold uppercase">Target: 200 calls / month</p>
+          {/* Search */}
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by name, phone, school or course..."
+              value={myStudentsSearch}
+              onChange={e => setMyStudentsSearch(e.target.value)}
+              className="w-full pl-9 glass-input text-xs"
+            />
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col justify-between shadow-xs md:col-span-1">
-            <div>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Waived Collections</span>
-              <span className="text-3xl font-mono font-bold text-emerald-600 mt-2 block">{formatCurrency(stats.totalPending ? stats.totalPending * 0.12 : 0)}</span>
-            </div>
-            <p className="text-[9px] text-gray-455 font-bold uppercase">MTD collection target cleared (12%)</p>
+          {/* Table */}
+          <div className="bg-white border border-gray-200 rounded-xl shadow-xs overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-150 text-xxs text-gray-600">
+              <thead className="bg-gray-50 uppercase font-bold text-gray-450 tracking-wider">
+                <tr>
+                  <th scope="col" className="px-4 py-3 text-left border-r border-gray-150 cursor-pointer hover:bg-gray-100/50 select-none" onClick={() => toggleSort('name')}>
+                    Student <SortIcon col="name" />
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left border-r border-gray-150 cursor-pointer hover:bg-gray-100/50 select-none" onClick={() => toggleSort('school')}>
+                    School <SortIcon col="school" />
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left border-r border-gray-150">Course</th>
+                  {activeSemNums.map(n => (
+                    <th key={n} scope="col" className="px-3 py-3 text-center border-r border-gray-150 whitespace-nowrap">
+                      Sem {n} Due
+                    </th>
+                  ))}
+                  <th scope="col" className="px-4 py-3 text-center border-r border-gray-150 cursor-pointer hover:bg-gray-100/50 select-none" onClick={() => toggleSort('totalDue')}>
+                    Total Due <SortIcon col="totalDue" />
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-center border-r border-gray-150">Status</th>
+                  <th scope="col" className="px-4 py-3 text-center">View</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-150 font-medium">
+                {loading ? (
+                  <tr>
+                    <td colSpan={5 + activeSemNums.length + 2} className="px-6 py-12 text-center text-gray-400">
+                      <div className="flex items-center justify-center gap-2">
+                        <RefreshCw className="w-4 h-4 animate-spin text-brand-500" />
+                        <span>Loading your students...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : sorted.length === 0 ? (
+                  <tr>
+                    <td colSpan={5 + activeSemNums.length + 2} className="px-6 py-14 text-center text-gray-400">
+                      <AlertCircle className="w-6 h-6 mx-auto mb-2 text-gray-300" />
+                      <p className="font-bold text-gray-500">No students assigned yet</p>
+                      <p className="text-[10px] mt-1 text-gray-400">Ask your Admin to assign students to your account.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  sorted.map(s => {
+                    const isDropped = s.status === 'DROPPED_OUT';
+                    return (
+                      <tr
+                        key={s.id}
+                        className={`hover:bg-brand-50/30 transition-colors cursor-pointer ${isDropped ? 'opacity-60' : ''}`}
+                        onClick={() => openStudentModal(s)}
+                      >
+                        <td className="px-4 py-2.5 font-bold text-gray-850 border-r border-gray-150">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-brand-100 border border-brand-200 flex items-center justify-center shrink-0 text-[9px] font-extrabold text-brand-700">
+                              {s.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="text-gray-850 font-bold">{s.name}</p>
+                              <p className="text-[9px] text-gray-400 font-semibold">{s.phonePrimary}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5 border-r border-gray-150 text-gray-600">{s.school?.name || '—'}</td>
+                        <td className="px-4 py-2.5 border-r border-gray-150 text-gray-600 max-w-[140px] truncate">{s.course?.name || '—'}</td>
+                        {activeSemNums.map(n => {
+                          const sem = s.semesters?.find((sem: any) => sem.semesterNumber === n);
+                          const hasPlan = sem && sem.feeAmount !== null;
+                          const due = hasPlan ? sem.due : null;
+                          return (
+                            <td key={n} className="px-3 py-2.5 text-center border-r border-gray-150 font-mono font-bold">
+                              {!hasPlan ? (
+                                <span className="text-gray-300">—</span>
+                              ) : due > 0 ? (
+                                <span className="text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">₹{due.toLocaleString('en-IN')}</span>
+                              ) : (
+                                <span className="text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded text-[9px] font-bold">✓ Cleared</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="px-4 py-2.5 text-center border-r border-gray-150 font-mono font-bold">
+                          {s.totalDue > 0 ? (
+                            <span className="text-rose-600">{formatCurrency(s.totalDue)}</span>
+                          ) : (
+                            <span className="text-emerald-600">{formatCurrency(0)}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5 text-center border-r border-gray-150">
+                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border ${
+                            isDropped ? 'bg-rose-50 border-rose-100 text-rose-650' : 'bg-emerald-50 border-emerald-100 text-emerald-650'
+                          }`}>
+                            {isDropped ? 'Drop Out' : 'Active'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-center">
+                          <button
+                            onClick={e => { e.stopPropagation(); openStudentModal(s); }}
+                            className="px-2.5 py-1 rounded bg-brand-50 border border-brand-100 hover:bg-brand-500 hover:text-white text-brand-650 text-[9px] font-bold cursor-pointer transition-colors"
+                          >
+                            Full Profile
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Daily Checklist Tracker */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4 shadow-xs max-w-xl">
-          <h3 className="font-semibold text-xs text-gray-800 uppercase tracking-wider">Daily Workspace Targets</h3>
-          <div className="space-y-2.5">
-            {tasks.map(t => (
-              <label key={t.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-150 cursor-pointer hover:bg-gray-100/50 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={t.completed}
-                  onChange={() => {
-                    setTasks(tasks.map(item => item.id === t.id ? { ...item, completed: !item.completed } : item));
-                  }}
-                  className="rounded border-gray-300 text-brand-600 focus:ring-brand-500/10 cursor-pointer"
-                />
-                <span className={`text-xs ${t.completed ? 'line-through text-gray-400 font-normal' : 'text-gray-700 font-semibold'}`}>{t.text}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      </motion.div>
+        {/* ===== LARGE STUDENT DETAIL MODAL ===== */}
+        <AnimatePresence>
+          {modalStudent && (
+            <motion.div
+              key="modal-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+              style={{ background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)' }}
+              onClick={closeModal}
+            >
+              <motion.div
+                key="modal-panel"
+                initial={{ opacity: 0, scale: 0.94, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 10 }}
+                transition={{ type: 'spring', stiffness: 340, damping: 28 }}
+                onClick={e => e.stopPropagation()}
+                className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-4xl max-h-[92vh] overflow-hidden flex flex-col"
+              >
+                {/* Modal Header */}
+                <div className="flex items-start justify-between px-7 py-5 border-b border-gray-150 bg-gradient-to-r from-brand-50 to-white shrink-0">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-brand-100 border border-brand-200 flex items-center justify-center text-xl font-extrabold text-brand-700 shadow-inner">
+                      {modalStudent.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-extrabold text-gray-900 tracking-tight font-display leading-tight">
+                        {modalStudent.name}
+                      </h2>
+                      <p className="text-[11px] text-gray-500 font-semibold mt-0.5">
+                        {modalStudent.course?.name || '—'} &nbsp;•&nbsp; {modalStudent.school?.name || '—'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`px-2.5 py-1 rounded border text-[9px] font-bold uppercase tracking-wider ${
+                      modalStudent.status === 'DROPPED_OUT'
+                        ? 'bg-rose-50 border-rose-200 text-rose-650'
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-650'
+                    }`}>
+                      {modalStudent.status === 'DROPPED_OUT' ? 'Drop Out' : 'Active'}
+                    </span>
+                    <button
+                      onClick={closeModal}
+                      className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 cursor-pointer transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Modal Body */}
+                <div className="overflow-y-auto flex-1 px-7 py-6 space-y-7 text-xs">
+                  {modalLoading ? (
+                    <div className="flex items-center justify-center py-20 gap-3 text-gray-400">
+                      <RefreshCw className="w-5 h-5 animate-spin text-brand-500" />
+                      <span className="font-semibold">Loading student details...</span>
+                    </div>
+                  ) : modalDetails ? (
+                    <>
+                      {/* Contact Info Row */}
+                      <div>
+                        <h3 className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-3">Contact Information</h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          <div className="p-3 rounded-xl bg-gray-50 border border-gray-150">
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Primary Phone</span>
+                            <a href={`tel:${modalDetails.phonePrimary}`} className="text-brand-600 font-bold hover:underline flex items-center gap-1.5">
+                              <Phone className="w-3.5 h-3.5 shrink-0" />
+                              {modalDetails.phonePrimary || '—'}
+                            </a>
+                          </div>
+                          {modalDetails.phoneSecondary && (
+                            <div className="p-3 rounded-xl bg-gray-50 border border-gray-150">
+                              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Secondary Phone</span>
+                              <a href={`tel:${modalDetails.phoneSecondary}`} className="text-brand-600 font-bold hover:underline flex items-center gap-1.5">
+                                <Phone className="w-3.5 h-3.5 shrink-0" />
+                                {modalDetails.phoneSecondary}
+                              </a>
+                            </div>
+                          )}
+                          {modalDetails.email && (
+                            <div className="p-3 rounded-xl bg-gray-50 border border-gray-150">
+                              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Email</span>
+                              <a href={`mailto:${modalDetails.email}`} className="text-brand-600 font-bold hover:underline flex items-center gap-1.5 truncate">
+                                <Mail className="w-3.5 h-3.5 shrink-0" />
+                                {modalDetails.email}
+                              </a>
+                            </div>
+                          )}
+                          <div className="p-3 rounded-xl bg-gray-50 border border-gray-150">
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">School</span>
+                            <p className="font-bold text-gray-800">{modalDetails.school?.name || '—'}</p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-gray-50 border border-gray-150">
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Course</span>
+                            <p className="font-bold text-gray-800">{modalDetails.course?.name || '—'}</p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-gray-50 border border-gray-150">
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Enrolled Since</span>
+                            <p className="font-bold text-gray-800">{modalDetails.createdAt ? new Date(modalDetails.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Financial Summary Banner */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="p-4 rounded-xl bg-gradient-to-br from-brand-50 to-white border border-brand-100 text-center">
+                          <span className="text-[9px] font-bold text-brand-500 uppercase tracking-wider block mb-1">Total Fee</span>
+                          <span className="text-base font-extrabold font-mono text-brand-700">{formatCurrency(modalDetails.totalExpected || 0)}</span>
+                        </div>
+                        <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-white border border-emerald-100 text-center">
+                          <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider block mb-1">Collected</span>
+                          <span className="text-base font-extrabold font-mono text-emerald-700">{formatCurrency(modalDetails.totalCollected || 0)}</span>
+                        </div>
+                        <div className="p-4 rounded-xl bg-gradient-to-br from-amber-50 to-white border border-amber-100 text-center">
+                          <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wider block mb-1">Outstanding</span>
+                          <span className="text-base font-extrabold font-mono text-amber-700">{formatCurrency(modalDetails.totalDue || 0)}</span>
+                        </div>
+                      </div>
+
+                      {/* Semester Breakdown */}
+                      <div>
+                        <h3 className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                          <BookOpen className="w-3.5 h-3.5 text-brand-500" /> Semester-wise Fee Breakdown
+                        </h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          {modalDetails.semesters.map((sem: any) => {
+                            const hasPlan = sem.feeAmount !== null;
+                            return (
+                              <div
+                                key={sem.semesterNumber}
+                                className={`p-3.5 rounded-xl border ${
+                                  !hasPlan
+                                    ? 'bg-gray-50/60 border-gray-100 opacity-40'
+                                    : sem.due > 0
+                                      ? 'bg-amber-50 border-amber-200'
+                                      : 'bg-emerald-50/60 border-emerald-150'
+                                }`}
+                              >
+                                <p className="font-extrabold text-[10px] text-gray-500 mb-2">
+                                  Semester {sem.semesterNumber}
+                                </p>
+                                {!hasPlan ? (
+                                  <p className="text-gray-350 italic font-semibold text-[10px]">Not planned</p>
+                                ) : (
+                                  <div className="space-y-1 text-[10px] font-bold">
+                                    <div className="flex justify-between text-gray-500">
+                                      <span>Fee</span>
+                                      <span className="font-mono">₹{sem.feeAmount?.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    {sem.adjustmentAmount > 0 && (
+                                      <div className="flex justify-between text-purple-600">
+                                        <span>Waiver</span>
+                                        <span className="font-mono">-₹{sem.adjustmentAmount?.toLocaleString('en-IN')}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex justify-between text-emerald-600">
+                                      <span>Received</span>
+                                      <span className="font-mono">₹{sem.receivedAmount?.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div className={`flex justify-between border-t border-gray-200 pt-1 mt-1 ${sem.due > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                      <span>Due</span>
+                                      <span className="font-mono font-extrabold">₹{sem.due?.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    {sem.dueDate && (
+                                      <p className="text-[9px] text-gray-400 font-semibold pt-0.5">
+                                        📅 {new Date(sem.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Call Log History */}
+                      <div>
+                        <h3 className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                          <MessageSquare className="w-3.5 h-3.5 text-brand-500" /> Call Log History ({modalDetails.callLogs?.length || 0} entries)
+                        </h3>
+                        {modalDetails.callLogs?.length > 0 ? (
+                          <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                            {modalDetails.callLogs.map((log: any) => (
+                              <div key={log.id} className="p-3.5 rounded-xl bg-gray-50 border border-gray-200 relative">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1">
+                                    <p className="font-extrabold text-brand-600 text-[11px]">{log.outcome.replace(/_/g, ' ')}</p>
+                                    <p className="text-gray-500 font-semibold mt-1 leading-relaxed text-[11px]">{log.notes}</p>
+                                    {log.scheduledFollowUp && (
+                                      <p className="text-[10px] text-amber-600 font-bold mt-2 flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        Callback: {new Date(log.scheduledFollowUp).toLocaleString('en-IN')}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <span className="text-[9px] text-gray-400 font-bold whitespace-nowrap shrink-0">
+                                    {new Date(log.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="py-8 text-center text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                            <MessageSquare className="w-6 h-6 mx-auto mb-2 text-gray-300" />
+                            <p className="font-semibold text-[11px]">No call logs yet for this student.</p>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="px-7 py-4 border-t border-gray-150 bg-gray-50/60 shrink-0 flex items-center justify-between">
+                  <p className="text-[10px] text-gray-400 font-semibold">
+                    Click <strong>Load CRM</strong> to log a call for this student.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        closeModal();
+                        handleSelectStudent(modalStudent);
+                        setActiveTab('crm');
+                      }}
+                      className="px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs cursor-pointer transition-colors shadow-xs"
+                    >
+                      Load CRM →
+                    </button>
+                    <button
+                      onClick={closeModal}
+                      className="px-4 py-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-100 text-gray-600 font-bold text-xs cursor-pointer transition-colors"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </>
     );
   }
 

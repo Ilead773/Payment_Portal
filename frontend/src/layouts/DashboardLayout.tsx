@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuthStore } from '../context/authStore';
 import { useNavigationStore } from '../context/navigationStore';
 import { 
-  LogOut, User, School, BarChart3, Users, Upload, Settings, Phone, ChevronLeft, ChevronRight, Menu, X, Calendar, Activity, UserPlus, Mail, UserCheck
+  LogOut, User, School, BarChart3, Users, Upload, Settings, Phone, ChevronLeft, ChevronRight, Menu, X, Calendar, GraduationCap, UserPlus, Mail, UserCheck, Activity
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -53,7 +53,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       group: 'Analytics',
       items: [
         { id: 'dashboard', label: 'Overview', icon: BarChart3 },
-        { id: 'performance', label: 'My Performance', icon: Activity },
+        { id: 'my-students', label: 'My Students', icon: GraduationCap },
       ]
     },
     {

@@ -1656,138 +1656,125 @@ const ExecutiveReportsTab: React.FC<{ stats: any }> = ({ stats }) => {
     document.body.removeChild(link);
   };
 
+  const evenRate = evenReport.receivables > 0 ? Math.round((evenReport.received / evenReport.receivables) * 100) : 0;
+  const oddRate = oddReport.receivables > 0 ? Math.round((oddReport.received / oddReport.receivables) * 100) : 0;
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in p-1">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-gray-900 font-display">Executive Financial Reports</h1>
-          <p className="text-gray-500 text-xs mt-1">Calculated dynamically across active cohorts and academic semesters.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 font-display">Executive Financial Reports</h1>
+          <p className="text-gray-500 text-sm mt-1">Real-time ledger analysis and cohort-based financial performance monitoring.</p>
         </div>
         <button
           onClick={handleExportCohortCSV}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all font-semibold text-xs cursor-pointer shadow-xs text-gray-600 self-start"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 text-white transition-all font-semibold text-xs shadow-md cursor-pointer"
         >
-          <Download className="w-3.5 h-3.5 text-gray-400" />
-          <span>Export Ledger CSV</span>
+          <Download className="w-3.5 h-3.5" />
+          <span>Export Ledger</span>
         </button>
       </div>
 
-      {/* Cohort Ledger Spreadsheet Grid (Excel-like premium UI) */}
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-xs overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-          <h3 className="font-semibold text-xs text-gray-700 uppercase tracking-wider">Cohort Ledger & Outstanding Analysis</h3>
-          <span className="text-[9px] text-gray-400 font-semibold bg-gray-100 px-2 py-0.5 rounded-md uppercase">
-            All Batches (Dynamic)
+      <div className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden ring-1 ring-gray-950/5">
+        <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+          <h3 className="font-bold text-gray-900">Cohort Ledger & Outstanding Analysis</h3>
+          <span className="text-[10px] font-bold text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200 uppercase tracking-widest shadow-sm">
+            Live Data
           </span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xxs font-medium text-gray-600 min-w-[900px]">
+          <table className="w-full text-left border-collapse text-[11px] font-medium text-gray-600">
             <thead>
-              <tr className="border-b border-gray-200 text-center font-bold">
-                <th className="px-3 py-3 text-left border-r border-gray-250 bg-gray-50/30 text-gray-500 uppercase tracking-wider w-[120px]">
-                  Semester
+              {/* Batch name row */}
+              <tr className="border-b border-gray-200">
+                <th className="px-4 py-3 text-left border-r border-gray-100 bg-gray-50/80 w-[130px]">
+                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Semester</span>
                 </th>
-                
                 {cohorts.map((cohort: any, idx: number) => {
-                  const colors = 
-                    idx === 0 
-                      ? 'bg-blue-50/60 text-blue-700 border-blue-200' 
-                      : idx === 1 
-                        ? 'bg-rose-50/60 text-rose-700 border-rose-200' 
-                        : 'bg-sky-50/60 text-sky-700 border-sky-200';
+                  const headerBg = idx === 0 ? 'from-blue-600 to-indigo-600' : idx === 1 ? 'from-rose-500 to-pink-600' : 'from-violet-600 to-purple-600';
                   return (
-                    <th 
-                      key={cohort.name}
-                      colSpan={4} 
-                      className={`px-3 py-2 border-r border-gray-250 ${colors} uppercase tracking-wider font-display font-bold`}
-                    >
-                      {cohort.name} - ({cohort.studentCount} NOS)
+                    <th key={cohort.name} colSpan={4} className="px-0 py-0 border-l border-gray-200">
+                      <div className={`bg-gradient-to-r ${headerBg} px-4 py-2.5 text-center`}>
+                        <span className="text-xs font-bold text-white tracking-wide font-display block">{cohort.name}</span>
+                        <span className="text-[9px] font-semibold text-white/70 block mt-0.5">{cohort.studentCount} students</span>
+                      </div>
                     </th>
                   );
                 })}
-
-                <th className="px-3 py-2 bg-slate-100/80 text-slate-800 border-l border-gray-250 font-display font-bold uppercase tracking-wider">
-                  Total Due
+                <th className="px-4 py-0 border-l border-gray-200 bg-slate-800">
+                  <div className="px-2 py-2.5 text-center">
+                    <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest block">Total</span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Due</span>
+                  </div>
                 </th>
               </tr>
-
-              <tr className="border-b border-gray-200 text-center text-gray-400 font-semibold uppercase tracking-wider text-[8px] bg-gray-50/40">
-                <th className="px-3 py-2 text-left border-r border-gray-250"></th>
-                
-                {cohorts.map((cohort: any) => (
-                  <React.Fragment key={cohort.name + '-sub'}>
-                    <th className="px-2 py-2">Fees</th>
-                    <th className="px-2 py-2">Received</th>
-                    <th className="px-2 py-2">Due</th>
-                    <th className="px-2 py-2 border-r border-gray-250 bg-gray-50/20 text-gray-500 font-bold">Nos Due</th>
-                  </React.Fragment>
-                ))}
-
-                <th className="px-3 py-2 bg-slate-50/80 border-l border-gray-250"></th>
+              {/* Sub-column header row */}
+              <tr className="border-b-2 border-gray-200 bg-gray-50/40">
+                <th className="px-4 py-2 border-r border-gray-100" />
+                {cohorts.map((cohort: any, idx: number) => {
+                  const subColors = idx === 0 ? 'text-blue-600 bg-blue-50/60' : idx === 1 ? 'text-rose-600 bg-rose-50/60' : 'text-violet-600 bg-violet-50/60';
+                  return (
+                    <React.Fragment key={cohort.name + '-sub'}>
+                      <th className={`px-3 py-2 text-center border-l border-gray-100 ${subColors}`}>
+                        <span className="text-[8px] font-bold uppercase tracking-wider">Fees</span>
+                      </th>
+                      <th className="px-3 py-2 text-center bg-emerald-50/60">
+                        <span className="text-[8px] font-bold uppercase tracking-wider text-emerald-600">Rcvd</span>
+                      </th>
+                      <th className="px-3 py-2 text-center bg-amber-50/60">
+                        <span className="text-[8px] font-bold uppercase tracking-wider text-amber-600">Due</span>
+                      </th>
+                      <th className="px-3 py-2 text-center bg-slate-50">
+                        <span className="text-[8px] font-bold uppercase tracking-wider text-slate-500">Nos</span>
+                      </th>
+                    </React.Fragment>
+                  );
+                })}
+                <th className="px-4 py-2 bg-slate-100/80 border-l border-gray-200" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-150">
+            <tbody className="divide-y divide-gray-100">
               {Array.from({ length: 8 }).map((_, semIdx) => {
                 const semNum = semIdx + 1;
                 return (
-                  <tr key={semNum} className="hover:bg-gray-50/50 transition-colors font-mono">
-                    <td className="px-3 py-2.5 font-sans font-semibold text-gray-800 border-r border-gray-250 bg-gray-50/30">
-                      {getSemesterLabel(semNum)}
-                    </td>
-
+                  <tr key={semNum} className="hover:bg-blue-50/30 transition-colors">
+                    <td className="px-6 py-4 font-semibold text-gray-900">{getSemesterLabel(semNum)}</td>
                     {cohorts.map((cohort: any) => {
                       const sem = cohort.semesters[semIdx] || { fees: 0, received: 0, due: 0, nosDue: 0 };
-                      const dueColor = sem.due > 0 ? 'text-amber-600 font-semibold' : sem.due < 0 ? 'text-rose-600' : 'text-gray-500';
-                      const nosDueColor = sem.nosDue > 0 ? 'bg-amber-50 text-amber-700 font-bold border border-amber-100' : 'text-gray-400';
                       return (
-                        <React.Fragment key={cohort.name + '-sem-' + semNum}>
-                          <td className="px-2 py-2.5 text-right">{formatNumberForTable(sem.fees)}</td>
-                          <td className="px-2 py-2.5 text-right text-emerald-600">{formatNumberForTable(sem.received)}</td>
-                          <td className={`px-2 py-2.5 text-right ${dueColor}`}>
-                            {sem.due !== 0 ? formatNumberForTable(sem.due) : '—'}
-                          </td>
-                          <td className="px-2 py-2.5 text-center border-r border-gray-250 bg-gray-50/10">
-                            {sem.nosDue > 0 ? (
-                              <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] ${nosDueColor}`}>
-                                {sem.nosDue}
-                              </span>
-                            ) : '—'}
-                          </td>
+                        <React.Fragment key={cohort.name + '-sem-' + semIdx}>
+                          <td className="px-4 py-4 text-right border-l border-gray-100">{formatNumberForTable(sem.fees)}</td>
+                          <td className="px-4 py-4 text-right text-emerald-600 font-semibold">{formatNumberForTable(sem.received)}</td>
+                          <td className={`px-4 py-4 text-right font-semibold ${sem.due > 0 ? 'text-amber-600' : 'text-gray-400'}`}>{formatNumberForTable(sem.due)}</td>
+                          <td className="px-4 py-4 text-center text-rose-500 font-bold">{sem.nosDue > 0 ? sem.nosDue : '—'}</td>
                         </React.Fragment>
                       );
                     })}
-
-                    <td className={`px-3 py-2.5 text-right border-l border-gray-250 bg-slate-50/60 font-semibold text-xs ${
-                      semesterTotals[semIdx]?.totalDue > 0 ? 'text-slate-800 font-bold' : 'text-gray-500'
-                    }`}>
-                      {semesterTotals[semIdx]?.totalDue !== undefined ? formatCurrency(semesterTotals[semIdx].totalDue) : '—'}
-                    </td>
+                    <td className="px-6 py-4 text-right border-l border-gray-100 font-bold text-gray-900">{formatCurrency(semesterTotals[semIdx]?.totalDue || 0)}</td>
                   </tr>
                 );
               })}
-
-              <tr className="bg-gray-100/80 font-bold font-mono border-t-2 border-gray-300 text-gray-800 text-xxs">
-                <td className="px-3 py-3 font-sans uppercase tracking-wider text-xs border-r border-gray-250">
-                  Totals
+              {/* Totals row */}
+              <tr className="border-t-2 border-gray-300 bg-gray-50">
+                <td className="px-4 py-3.5 border-r border-gray-200 bg-gray-100">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Totals</span>
                 </td>
-
                 {cohorts.map((cohort: any) => (
                   <React.Fragment key={cohort.name + '-totals'}>
-                    <td className="px-2 py-3 text-right text-xs underline decoration-double decoration-gray-400">
+                    <td className="px-4 py-3.5 text-right font-mono text-xs text-gray-700 font-bold border-l border-gray-100">
                       {formatNumberForTable(cohort.totals.fees)}
                     </td>
-                    <td className="px-2 py-3 text-right text-xs text-emerald-700 underline decoration-double decoration-emerald-300">
+                    <td className="px-4 py-3.5 text-right font-mono text-xs text-emerald-700 font-bold">
                       {formatNumberForTable(cohort.totals.received)}
                     </td>
-                    <td className="px-2 py-3 text-right text-xs text-amber-700 underline decoration-double decoration-amber-300">
+                    <td className="px-4 py-3.5 text-right font-mono text-xs text-amber-700 font-bold">
                       {formatNumberForTable(cohort.totals.due)}
                     </td>
-                    <td className="px-2 py-3 border-r border-gray-250 bg-gray-150/40"></td>
+                    <td className="px-4 py-3.5 bg-gray-100/60" />
                   </React.Fragment>
                 ))}
-
-                <td className="px-3 py-3 text-right border-l border-gray-250 bg-slate-200 text-slate-900 font-bold text-xs underline decoration-double decoration-slate-400">
+                <td className="px-4 py-3.5 text-right border-l border-gray-300 bg-slate-800 text-white font-mono text-sm font-bold">
                   {formatCurrency(grandTotalDue)}
                 </td>
               </tr>
@@ -1796,130 +1783,207 @@ const ExecutiveReportsTab: React.FC<{ stats: any }> = ({ stats }) => {
         </div>
       </div>
 
-      {/* Side-by-Side Comparison Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Even Semester DEC 2025 Card */}
-        <div className="bg-white border border-gray-250 rounded-2xl shadow-xs overflow-hidden flex flex-col justify-between">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 text-white">
-            <h3 className="font-semibold text-xs tracking-wide uppercase">Even Semester Fees (DEC - 2025)</h3>
-            <p className="text-[9px] text-blue-100 font-medium mt-0.5">Active Cohorts: Batch 2025 (Sem 2), Batch 2024 (Sem 4), Batch 2023 (Sem 6)</p>
-          </div>
+      {/* ── SEMESTER FEE REPORT CARDS ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-3 gap-4 border-b border-gray-100 pb-5 text-center">
-              <div>
-                <span className="text-[8px] font-bold text-gray-400 uppercase block tracking-wider">Active Students</span>
-                <span className="text-sm font-mono font-bold text-gray-900 mt-1 block">{evenReport.totalStudents}</span>
+        {/* Even Semester Card */}
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-xs overflow-hidden flex flex-col">
+          <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 px-6 pt-5 pb-6 relative overflow-hidden">
+            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, white 0%, transparent 60%)' }} />
+            <div className="relative z-10">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <span className="text-[9px] font-bold text-blue-200 uppercase tracking-widest block">Even Semester</span>
+                  <h3 className="text-base font-bold text-white mt-0.5 font-display">DEC – 2025</h3>
+                </div>
+                <span className="shrink-0 text-[8px] font-bold bg-white/20 border border-white/30 text-white px-2 py-0.5 rounded-md uppercase tracking-wider mt-0.5">
+                  Active
+                </span>
               </div>
-              <div>
-                <span className="text-[8px] font-bold text-emerald-500 uppercase block tracking-wider">Paid Accounts</span>
-                <span className="text-sm font-mono font-bold text-emerald-600 mt-1 block">{evenReport.paidCount}</span>
+              <p className="text-[10px] text-blue-200 font-medium mt-2">Batch 2025 (Sem 2) · Batch 2024 (Sem 4) · Batch 2023 (Sem 6)</p>
+            </div>
+            <div className="relative z-10 grid grid-cols-3 gap-3 mt-5">
+              <div className="bg-white/15 border border-white/20 rounded-xl p-3 text-center">
+                <span className="text-[8px] font-bold text-blue-200 uppercase tracking-wider block">Students</span>
+                <span className="text-xl font-mono font-bold text-white block mt-0.5">{evenReport.totalStudents}</span>
               </div>
-              <div>
-                <span className="text-[8px] font-bold text-amber-500 uppercase block tracking-wider">Pending Dues</span>
-                <span className="text-sm font-mono font-bold text-amber-600 mt-1 block">{evenReport.pendingCount}</span>
+              <div className="bg-emerald-500/30 border border-emerald-400/40 rounded-xl p-3 text-center">
+                <span className="text-[8px] font-bold text-emerald-200 uppercase tracking-wider block">Paid</span>
+                <span className="text-xl font-mono font-bold text-white block mt-0.5">{evenReport.paidCount}</span>
+              </div>
+              <div className="bg-amber-500/30 border border-amber-400/40 rounded-xl p-3 text-center">
+                <span className="text-[8px] font-bold text-amber-200 uppercase tracking-wider block">Pending</span>
+                <span className="text-xl font-mono font-bold text-white block mt-0.5">{evenReport.pendingCount}</span>
               </div>
             </div>
+          </div>
 
-            <div className="space-y-4 font-semibold text-xs text-gray-600">
-              <div className="flex justify-between items-center py-0.5">
-                <span className="text-gray-400 font-bold uppercase tracking-wider text-[8px]">Total Expected (Receivables)</span>
-                <span className="font-mono text-gray-900 font-bold text-xs">{formatCurrency(evenReport.receivables)}</span>
+          <div className="px-6 py-3 bg-gray-50 border-b border-gray-100">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Collection Rate</span>
+              <span className="text-[10px] font-bold text-brand-600">{evenRate}%</span>
+            </div>
+            <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all" style={{ width: `${Math.min(evenRate, 100)}%` }} />
+            </div>
+          </div>
+
+          <div className="p-6 space-y-3 flex-1">
+            <div className="flex justify-between items-center py-2 border-b border-gray-50">
+              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Total Expected</span>
+              <span className="font-mono text-gray-900 font-bold text-xs">{formatCurrency(evenReport.receivables)}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-gray-50">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider">Total Received (Net)</span>
               </div>
-              <div className="flex justify-between items-center py-0.5">
-                <span className="text-emerald-500 font-bold uppercase tracking-wider text-[8px]">Total Received (Net)</span>
-                <span className="font-mono text-emerald-600 font-bold text-xs">+{formatCurrency(evenReport.received)}</span>
+              <span className="font-mono text-emerald-600 font-bold text-xs">+{formatCurrency(evenReport.received)}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-gray-50">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+                <span className="text-[10px] font-semibold text-indigo-500 uppercase tracking-wider">Suspense Received</span>
               </div>
-              <div className="flex justify-between items-center py-0.5">
-                <span className="text-indigo-500 font-bold uppercase tracking-wider text-[8px]">Suspense Received</span>
-                <span className="font-mono text-indigo-650 font-bold text-xs">+{formatCurrency(evenReport.suspense)}</span>
+              <span className="font-mono text-indigo-600 font-bold text-xs">+{formatCurrency(evenReport.suspense)}</span>
+            </div>
+            <div className="flex justify-between items-center pt-3">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Total Outstanding Due</span>
               </div>
-              <div className="flex justify-between items-center pt-4 border-t border-gray-100">
-                <span className="text-rose-500 font-bold uppercase tracking-wider text-[8px]">Total Outstanding Due</span>
-                <span className="font-mono text-rose-600 font-bold text-xs">{formatCurrency(evenReport.due)}</span>
-              </div>
+              <span className="font-mono text-rose-600 font-bold text-sm">{formatCurrency(evenReport.due)}</span>
             </div>
           </div>
         </div>
 
-        {/* Odd Semester JUNE 2026 Card */}
-        <div className="bg-white border border-gray-250 rounded-2xl shadow-xs overflow-hidden flex flex-col justify-between">
-          <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4 text-white">
-            <h3 className="font-semibold text-xs tracking-wide uppercase">Odd Semester Fees (JUNE - 2026)</h3>
-            <p className="text-[9px] text-emerald-100 font-medium mt-0.5">Active Cohorts: Batch 2025 (Sem 3), Batch 2024 (Sem 5)</p>
-          </div>
-
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-3 gap-4 border-b border-gray-100 pb-5 text-center">
-              <div>
-                <span className="text-[8px] font-bold text-gray-400 uppercase block tracking-wider">Active Students</span>
-                <span className="text-sm font-mono font-bold text-gray-900 mt-1 block">{oddReport.totalStudents}</span>
-              </div>
-              <div>
-                <span className="text-[8px] font-bold text-emerald-500 uppercase block tracking-wider">Paid Accounts</span>
-                <span className="text-sm font-mono font-bold text-emerald-600 mt-1 block">{oddReport.paidCount}</span>
-              </div>
-              <div>
-                <span className="text-[8px] font-bold text-amber-500 uppercase block tracking-wider">Pending Dues</span>
-                <span className="text-sm font-mono font-bold text-amber-600 mt-1 block">{oddReport.pendingCount}</span>
-              </div>
-            </div>
-
-            <div className="space-y-4 font-semibold text-xs text-gray-600">
-              <div className="flex justify-between items-center py-0.5">
-                <span className="text-gray-400 font-bold uppercase tracking-wider text-[8px]">Total Expected (Receivables)</span>
-                <span className="font-mono text-gray-900 font-bold text-xs">{formatCurrency(oddReport.receivables)}</span>
-              </div>
-              <div className="flex justify-between items-center py-0.5">
-                <span className="text-emerald-500 font-bold uppercase tracking-wider text-[8px]">Total Received (Net)</span>
-                <span className="font-mono text-emerald-600 font-bold text-xs">+{formatCurrency(oddReport.received)}</span>
-              </div>
-              <div className="flex justify-between items-center py-0.5">
-                <span className="text-indigo-500 font-bold uppercase tracking-wider text-[8px]">Suspense Received</span>
-                <span className="font-mono text-gray-950 font-bold text-xs">
-                  {oddReport.suspense > 0 ? `+${formatCurrency(oddReport.suspense)}` : '—'}
+        {/* Odd Semester Card */}
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-xs overflow-hidden flex flex-col">
+          <div className="bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-700 px-6 pt-5 pb-6 relative overflow-hidden">
+            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, white 0%, transparent 60%)' }} />
+            <div className="relative z-10">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <span className="text-[9px] font-bold text-emerald-200 uppercase tracking-widest block">Odd Semester</span>
+                  <h3 className="text-base font-bold text-white mt-0.5 font-display">JUNE – 2026</h3>
+                </div>
+                <span className="shrink-0 text-[8px] font-bold bg-white/20 border border-white/30 text-white px-2 py-0.5 rounded-md uppercase tracking-wider mt-0.5">
+                  Active
                 </span>
               </div>
-              <div className="flex justify-between items-center pt-4 border-t border-gray-100">
-                <span className="text-rose-500 font-bold uppercase tracking-wider text-[8px]">Total Outstanding Due</span>
-                <span className="font-mono text-rose-600 font-bold text-xs">{formatCurrency(oddReport.due)}</span>
+              <p className="text-[10px] text-emerald-200 font-medium mt-2">Batch 2025 (Sem 3) · Batch 2024 (Sem 5)</p>
+            </div>
+            <div className="relative z-10 grid grid-cols-3 gap-3 mt-5">
+              <div className="bg-white/15 border border-white/20 rounded-xl p-3 text-center">
+                <span className="text-[8px] font-bold text-emerald-200 uppercase tracking-wider block">Students</span>
+                <span className="text-xl font-mono font-bold text-white block mt-0.5">{oddReport.totalStudents}</span>
               </div>
+              <div className="bg-emerald-400/30 border border-emerald-300/40 rounded-xl p-3 text-center">
+                <span className="text-[8px] font-bold text-emerald-100 uppercase tracking-wider block">Paid</span>
+                <span className="text-xl font-mono font-bold text-white block mt-0.5">{oddReport.paidCount}</span>
+              </div>
+              <div className="bg-amber-500/30 border border-amber-400/40 rounded-xl p-3 text-center">
+                <span className="text-[8px] font-bold text-amber-200 uppercase tracking-wider block">Pending</span>
+                <span className="text-xl font-mono font-bold text-white block mt-0.5">{oddReport.pendingCount}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-6 py-3 bg-gray-50 border-b border-gray-100">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Collection Rate</span>
+              <span className="text-[10px] font-bold text-emerald-600">{oddRate}%</span>
+            </div>
+            <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all" style={{ width: `${Math.min(oddRate, 100)}%` }} />
+            </div>
+          </div>
+
+          <div className="p-6 space-y-3 flex-1">
+            <div className="flex justify-between items-center py-2 border-b border-gray-50">
+              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Total Expected</span>
+              <span className="font-mono text-gray-900 font-bold text-xs">{formatCurrency(oddReport.receivables)}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-gray-50">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider">Total Received (Net)</span>
+              </div>
+              <span className="font-mono text-emerald-600 font-bold text-xs">+{formatCurrency(oddReport.received)}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-gray-50">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+                <span className="text-[10px] font-semibold text-indigo-500 uppercase tracking-wider">Suspense Received</span>
+              </div>
+              <span className="font-mono text-gray-700 font-bold text-xs">
+                {oddReport.suspense > 0 ? `+${formatCurrency(oddReport.suspense)}` : '—'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center pt-3">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Total Outstanding Due</span>
+              </div>
+              <span className="font-mono text-rose-600 font-bold text-sm">{formatCurrency(oddReport.due)}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Daily Collections Breakdown Widget */}
-      <div className="bg-white border border-gray-250 rounded-2xl p-6 shadow-sm">
-        <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-6">
-          <div>
-            <h4 className="font-bold text-sm text-gray-805 uppercase tracking-wide">Daily Collection Breakdown</h4>
-            <p className="text-[10px] text-gray-455 mt-0.5 font-medium">Categorized transactions received on the query/current day.</p>
+      {/* ── DAILY COLLECTION BREAKDOWN ── */}
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-xs overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-5 rounded-full bg-gradient-to-b from-emerald-500 to-teal-500" />
+            <div>
+              <h4 className="font-bold text-xs text-gray-800 tracking-tight">Daily Collection Breakdown</h4>
+              <p className="text-[10px] text-gray-400 font-medium mt-0.5">Categorised transactions received on the query / current day</p>
+            </div>
           </div>
-          <span className="bg-brand-50 border border-brand-100 text-brand-700 text-[8px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+          <span className="bg-brand-50 border border-brand-100 text-brand-700 text-[9px] font-bold px-3 py-1 rounded-lg uppercase tracking-wider">
             Query Date
           </span>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-slate-50 border border-slate-150 p-4 rounded-xl">
-            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Admissions 2026</span>
-            <span className="text-sm font-mono font-bold text-slate-800 mt-1 block">{formatCurrency(dailyBreakdown.admissions)}</span>
-          </div>
-
-          <div className="bg-blue-50/50 border border-blue-100/80 p-4 rounded-xl">
-            <span className="text-[8px] font-bold text-blue-500 uppercase tracking-wider block">Even Semester Fees</span>
-            <span className="text-sm font-mono font-bold text-blue-700 mt-1 block">{formatCurrency(dailyBreakdown.evenSemester)}</span>
-          </div>
-
-          <div className="bg-emerald-50/50 border border-emerald-100/80 p-4 rounded-xl">
-            <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-wider block">Odd Semester Fees</span>
-            <span className="text-sm font-mono font-bold text-emerald-700 mt-1 block">{formatCurrency(dailyBreakdown.oddSemester)}</span>
-          </div>
-
-          <div className="bg-gradient-to-br from-brand-500 to-indigo-650 p-4 rounded-xl text-white">
-            <span className="text-[8px] font-bold text-brand-100 uppercase tracking-wider block">Total Received</span>
-            <span className="text-base font-mono font-bold mt-1 block">{formatCurrency(dailyBreakdown.totalReceived)}</span>
+        <div className="p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col gap-3 hover:border-slate-300 hover:shadow-xs transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Admissions 2026</span>
+                <div className="w-7 h-7 rounded-lg bg-slate-200/80 flex items-center justify-center">
+                  <Users className="w-3.5 h-3.5 text-slate-500" />
+                </div>
+              </div>
+              <span className="text-xl font-mono font-bold text-slate-800">{formatCurrency(dailyBreakdown.admissions)}</span>
+            </div>
+            <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-4 flex flex-col gap-3 hover:border-blue-200 hover:shadow-xs transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-bold text-blue-600 uppercase tracking-widest">Even Sem Fees</span>
+                <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <CheckCircle className="w-3.5 h-3.5 text-blue-500" />
+                </div>
+              </div>
+              <span className="text-xl font-mono font-bold text-blue-700">{formatCurrency(dailyBreakdown.evenSemester)}</span>
+            </div>
+            <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl p-4 flex flex-col gap-3 hover:border-emerald-200 hover:shadow-xs transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Odd Sem Fees</span>
+                <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                </div>
+              </div>
+              <span className="text-xl font-mono font-bold text-emerald-700">{formatCurrency(dailyBreakdown.oddSemester)}</span>
+            </div>
+            <div className="bg-gradient-to-br from-brand-600 via-brand-700 to-indigo-700 rounded-xl p-4 flex flex-col gap-3 relative overflow-hidden">
+              <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 10%, white 0%, transparent 55%)' }} />
+              <div className="relative flex items-center justify-between">
+                <span className="text-[9px] font-bold text-brand-200 uppercase tracking-widest">Total Received</span>
+                <div className="w-7 h-7 rounded-lg bg-white/20 border border-white/30 flex items-center justify-center">
+                  <AlertCircle className="w-3.5 h-3.5 text-white" />
+                </div>
+              </div>
+              <span className="relative text-xl font-mono font-bold text-white">{formatCurrency(dailyBreakdown.totalReceived)}</span>
+            </div>
           </div>
         </div>
       </div>
