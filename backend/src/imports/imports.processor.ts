@@ -32,16 +32,22 @@ export class ImportsProcessor extends WorkerHost {
     // Split by slash, comma, semicolon, space, or vertical bar
     const parts = cleanStr.split(/[\/,;\s\|]+/).map(p => p.trim()).filter(Boolean);
     if (parts.length === 0) {
-      return { primary: '', secondary: null, warning: true };
+      return { primary: '', secondary: null, warning: false };
     }
+    
+    const checkInvalid = (p: string) => {
+      const digits = p.replace(/\D/g, '');
+      return digits.length > 0 && digits.length < 7;
+    };
+
     if (parts.length === 1) {
-      return { primary: parts[0], secondary: null, warning: parts[0].length < 7 };
+      return { primary: parts[0], secondary: null, warning: checkInvalid(parts[0]) };
     }
     // Return primary and secondary. Aggregate any additional numbers in secondary
     return {
       primary: parts[0],
       secondary: parts.slice(1).join(' / '),
-      warning: parts.some(p => p.length < 7),
+      warning: parts.some(checkInvalid),
     };
   }
 

@@ -1180,7 +1180,10 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         }
         if (phone) {
           const phoneParts = phone.split(/[\/,;\s\|]+/).map(p => p.trim()).filter(Boolean);
-          if (phoneParts.some(p => p.length < 7)) {
+          if (phoneParts.some(p => {
+            const digits = p.replace(/\D/g, '');
+            return digits.length > 0 && digits.length < 7;
+          })) {
             warnings++;
             warns.push(`Row ${rowNum}: Phone number may be invalid (too short).`);
           }
@@ -1254,7 +1257,10 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             }
             if (phone) {
               const phoneParts = phone.split(/[\/,;\s\|]+/).map(p => p.trim()).filter(Boolean);
-              if (phoneParts.some(p => p.length < 7)) {
+              if (phoneParts.some(p => {
+                const digits = p.replace(/\D/g, '');
+                return digits.length > 0 && digits.length < 7;
+              })) {
                 warnings++;
                 warns.push(`Row ${rowNum}: Phone number may be invalid (too short).`);
               }
