@@ -302,7 +302,8 @@ export class ImportsProcessor extends WorkerHost {
       const rowNum = index + 1; // row 1 in array is row 2 in Excel
       const record = records[index];
       const name = studentIndex < record.length ? String(record[studentIndex] || '').trim() : '';
-      const schoolName = (schoolIndex < record.length ? String(record[schoolIndex] || '').trim() : '') || 'iLEAD Foundation';
+      const rawSchool = schoolIndex < record.length ? String(record[schoolIndex] || '').trim() : '';
+      const schoolName = rawSchool || 'iLEAD Foundation';
       const courseName = courseIndex < record.length ? String(record[courseIndex] || '').trim() : '';
       const email = emailIndex < record.length ? String(record[emailIndex] || '').trim() : '';
       const phoneRaw = phoneIndex < record.length ? String(record[phoneIndex] || '').trim() : '';
@@ -311,6 +312,11 @@ export class ImportsProcessor extends WorkerHost {
       let rowStatus: 'success' | 'warning' | 'error' = 'success';
 
       // 1. Mandatory validations
+      if (!name && !rawSchool) {
+        // Skip summary/total rows silently (e.g. at the bottom of the sheets)
+        continue;
+      }
+
       if (!name) {
         // If the entire row is empty, skip silently!
         const isRowEmpty = record.every(val => val === undefined || val === null || String(val).trim() === '');

@@ -1174,6 +1174,11 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         const course = getRowValue(row, ['Course', 'course', 'crs', 'stream']);
         const phone = getRowValue(row, ['Phone Number', 'phone_number', 'phone', 'mobile']);
 
+        if (!name && !school) {
+          // Skip summary/total rows silently (e.g. at the bottom of the sheets)
+          return;
+        }
+
         if (!name || !school || !course) {
           const isRowEmpty = Object.values(row).every(val => val === undefined || val === null || String(val).trim() === '');
           if (!isRowEmpty) {
@@ -1261,6 +1266,11 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             const school = getRowValue(row, ['School', 'school', 'sch']);
             const course = getRowValue(row, ['Course', 'course', 'crs', 'stream']);
             const phone = getRowValue(row, ['Phone Number', 'phone_number', 'phone', 'mobile']);
+
+            if (!name && !school) {
+              // Skip summary/total rows silently (e.g. at the bottom of the sheets)
+              return;
+            }
 
             if (!name || !school || !course) {
               errors++;
