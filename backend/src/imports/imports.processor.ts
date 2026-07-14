@@ -37,7 +37,8 @@ export class ImportsProcessor extends WorkerHost {
     
     const checkInvalid = (p: string) => {
       const digits = p.replace(/\D/g, '');
-      return digits.length > 0 && digits.length < 7;
+      const isPlaceholder = digits.length === 0 || /^[0]+$/.test(digits);
+      return !isPlaceholder && digits.length < 7;
     };
 
     if (parts.length === 1) {
