@@ -1131,6 +1131,7 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [previewRows, setPreviewRows] = useState<any[]>([]);
   const [previewStats, setPreviewStats] = useState<any>({ total: 0, new: 0, updates: 0, warnings: 0, errors: 0 });
   const [warningList, setWarningList] = useState<string[]>([]);
+  const [errorList, setErrorList] = useState<string[]>([]);
   const [sheets, setSheets] = useState<string[]>([]);
   const [selectedSheet, setSelectedSheet] = useState<string>('');
   const [workbook, setWorkbook] = useState<any>(null);
@@ -1164,6 +1165,7 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       let warnings = 0;
       let errors = 0;
       const warns: string[] = [];
+      const errs: string[] = [];
 
       data.forEach((row: any, i: number) => {
         const rowNum = i + 2;
@@ -1176,6 +1178,11 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           const isRowEmpty = Object.values(row).every(val => val === undefined || val === null || String(val).trim() === '');
           if (!isRowEmpty) {
             errors++;
+            const missing = [];
+            if (!name) missing.push('Student Name');
+            if (!school) missing.push('School');
+            if (!course) missing.push('Course');
+            errs.push(`Row ${rowNum}: Missing mandatory field(s): ${missing.join(', ')}`);
           }
         }
         if (phone) {
@@ -1200,6 +1207,7 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         errors
       });
       setWarningList(warns);
+      setErrorList(errs);
     } catch (err: any) {
       alert(`Failed to preview sheet: ${err.message}`);
     }
@@ -1245,6 +1253,7 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           let warnings = 0;
           let errors = 0;
           const warns: string[] = [];
+          const errs: string[] = [];
 
           rows.forEach((row: any, i: number) => {
             const rowNum = i + 2;
@@ -1255,6 +1264,11 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
             if (!name || !school || !course) {
               errors++;
+              const missing = [];
+              if (!name) missing.push('Student Name');
+              if (!school) missing.push('School');
+              if (!course) missing.push('Course');
+              errs.push(`Row ${rowNum}: Missing mandatory field(s): ${missing.join(', ')}`);
             }
             if (phone) {
               const phoneParts = phone.split(/[\/,;\s\|]+/).map(p => p.trim()).filter(Boolean);
@@ -1278,6 +1292,7 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             errors
           });
           setWarningList(warns);
+          setErrorList(errs);
           setStep(2);
         }
       });
@@ -1394,6 +1409,13 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 <span className="text-lg font-bold block mt-1 text-emerald-600">Ready</span>
               </div>
             </div>
+
+            {errorList.length > 0 && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-800 text-xxs font-medium max-h-32 overflow-y-auto space-y-1">
+                <p className="font-bold flex items-center gap-1.5 mb-1.5"><AlertCircle className="w-3.5 h-3.5" /> Parse errors found (blocks import):</p>
+                {errorList.map((e, idx) => <p key={idx}>• {e}</p>)}
+              </div>
+            )}
 
             {warningList.length > 0 && (
               <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xxs font-medium max-h-24 overflow-y-auto space-y-1">
