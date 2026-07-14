@@ -35,13 +35,13 @@ export class ImportsProcessor extends WorkerHost {
       return { primary: '', secondary: null, warning: true };
     }
     if (parts.length === 1) {
-      return { primary: parts[0], secondary: null, warning: false };
+      return { primary: parts[0], secondary: null, warning: parts[0].length < 7 };
     }
-    // Return primary and secondary. If they had more than 2, flag a warning
+    // Return primary and secondary. Aggregate any additional numbers in secondary
     return {
       primary: parts[0],
-      secondary: parts[1],
-      warning: parts.length > 2 || parts.some(p => p.length < 7),
+      secondary: parts.slice(1).join(' / '),
+      warning: parts.some(p => p.length < 7),
     };
   }
 

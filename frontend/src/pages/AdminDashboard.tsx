@@ -1178,13 +1178,12 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             errors++;
           }
         }
-        if (phone && phone.includes(';')) {
-          warnings++;
-          warns.push(`Row ${rowNum}: Phone uses semi-colon. Recommends '/' split.`);
-        }
-        if (phone && phone.split(/[\/,;\s\-]+/).filter(Boolean).length > 2) {
-          warnings++;
-          warns.push(`Row ${rowNum}: Phone contains more than two numbers.`);
+        if (phone) {
+          const phoneParts = phone.split(/[\/,;\s\|]+/).map(p => p.trim()).filter(Boolean);
+          if (phoneParts.some(p => p.length < 7)) {
+            warnings++;
+            warns.push(`Row ${rowNum}: Phone number may be invalid (too short).`);
+          }
         }
       });
 
@@ -1253,13 +1252,12 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             if (!name || !school || !course) {
               errors++;
             }
-            if (phone && phone.includes(';')) {
-              warnings++;
-              warns.push(`Row ${rowNum}: Phone uses semi-colon. Recommends '/' split.`);
-            }
-            if (phone && phone.split(/[\/,;\s\-]+/).filter(Boolean).length > 2) {
-              warnings++;
-              warns.push(`Row ${rowNum}: Phone contains more than two numbers.`);
+            if (phone) {
+              const phoneParts = phone.split(/[\/,;\s\|]+/).map(p => p.trim()).filter(Boolean);
+              if (phoneParts.some(p => p.length < 7)) {
+                warnings++;
+                warns.push(`Row ${rowNum}: Phone number may be invalid (too short).`);
+              }
             }
           });
 
