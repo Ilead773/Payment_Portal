@@ -64,6 +64,7 @@ model Student {
   phonePrimary    String
   phoneSecondary  String?
   counselorId     String?
+  cohort          String?
   status          String        @default("ACTIVE") // "ACTIVE" | "DROPPED_OUT"
   examCellRemarks String?
   createdAt       DateTime      @default(now())
