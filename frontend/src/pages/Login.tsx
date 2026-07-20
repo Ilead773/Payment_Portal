@@ -54,9 +54,6 @@ export const Login: React.FC = () => {
           <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
             iLead Payment Portal
           </h2>
-          <p className="text-slate-500 text-xs mt-1.5 font-medium max-w-[280px]">
-            Access student ledger management and counselor workspaces
-          </p>
         </div>
 
         {/* Sliding Error Notification */}
