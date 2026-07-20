@@ -428,6 +428,10 @@ export class ImportsProcessor extends WorkerHost {
           const status = reMark.toLowerCase().includes('drop out') ? 'DROPPED_OUT' : 'ACTIVE';
           const remarks = examRemarksIndex !== -1 && examRemarksIndex < record.length ? String(record[examRemarksIndex] || '').trim() : null;
 
+          const cohort = sheetName.toUpperCase().includes('BATCH')
+            ? sheetName.toUpperCase().replace('BATCH', '').trim()
+            : null;
+
           if (student) {
             // Update student
             student = await tx.student.update({
@@ -437,6 +441,7 @@ export class ImportsProcessor extends WorkerHost {
                 courseId: course.id,
                 counselorId: counselorId || student.counselorId,
                 status,
+                cohort: cohort || student.cohort,
                 examCellRemarks: remarks || student.examCellRemarks,
                 phoneSecondary: phoneData.secondary || student.phoneSecondary,
               },
@@ -454,6 +459,7 @@ export class ImportsProcessor extends WorkerHost {
                 phoneSecondary: phoneData.secondary,
                 counselorId,
                 status,
+                cohort,
                 examCellRemarks: remarks,
               },
             });

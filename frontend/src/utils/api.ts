@@ -31,6 +31,11 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestOpti
     headers,
   });
 
+  if (response.status === 401) {
+    useAuthStore.getState().logout();
+    throw new Error('Session expired. Please log in again.');
+  }
+
   if (!response.ok) {
     let errMsg = 'An error occurred';
     try {

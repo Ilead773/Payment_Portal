@@ -13,7 +13,7 @@ export class ReminderSchedulerService {
   ) {}
 
   // Daily cron job at midnight
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  // @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async handleCron() {
     this.logger.log('Starting automated fee payment reminder checks...');
     const result = await this.sendFeeReminders();

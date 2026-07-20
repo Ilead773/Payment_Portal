@@ -22,6 +22,11 @@ export class DashboardService {
   }
 
   private getStudentBatchYear(student: any): number {
+    if (student.cohort) {
+      const year = parseInt(student.cohort);
+      if (!isNaN(year)) return year;
+    }
+
     const activeSemPlans = student.semesterPlans.filter((p: any) => p.feeAmount > 0);
     let highestSem = 0;
     if (activeSemPlans.length > 0) {

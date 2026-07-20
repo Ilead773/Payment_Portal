@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useNavigationStore } from '../context/navigationStore';
+import { useAuthStore } from '../context/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
@@ -1325,6 +1326,11 @@ const CsvImportWizard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         },
         body: formData
       });
+
+      if (res.status === 401) {
+        useAuthStore.getState().logout();
+        throw new Error('Session expired. Please log in again.');
+      }
 
       if (!res.ok) throw new Error('Upload failed');
       const data = await res.json();
